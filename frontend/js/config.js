@@ -104,3 +104,64 @@ window.GENRE_TO_REAL = {
   'Indie': 'Indie',
   "Children's": 'Family', 'Childrens': 'Family', 'Children': 'Family'
 };
+
+/* ============================================================
+ * 中文片名 → 英文片名（搜索用）
+ * 数据库 movieinfo.moviename 为英文 TMDB 片名，后端按英文字段搜索。
+ * 用户输入中文片名时，前端先用本映射翻译成英文再请求后端。
+ * 自动映射还包含 mock-data.js 中 69 部电影的中英文名；这里补充其余经典影片。
+ * ============================================================ */
+window.ZH2EN_EXTRA = {
+  '阿凡达': 'Avatar',
+  '泰坦尼克号': 'Titanic',
+  '泰坦尼克': 'Titanic',
+  '变形金刚': 'Transformers',
+  '复仇者联盟': 'The Avengers',
+  '蜘蛛侠': 'Spider-Man',
+  '钢铁侠': 'Iron Man',
+  '蝙蝠侠': 'Batman Begins',
+  '蝙蝠侠黑暗骑士': 'The Dark Knight',
+  '黑暗骑士': 'The Dark Knight',
+  '哈利波特': 'Harry Potter and the Philosopher\'s Stone',
+  '哈利·波特': 'Harry Potter and the Philosopher\'s Stone',
+  '指环王': 'The Lord of the Rings: The Fellowship of the Ring',
+  '魔戒': 'The Lord of the Rings: The Fellowship of the Ring',
+  '辛德勒的名单': 'Schindler\'s List',
+  '拯救大兵瑞恩': 'Saving Private Ryan',
+  '无间道风云': 'The Departed',
+  '好家伙': 'Goodfellas',
+  '非常嫌疑犯': 'The Usual Suspects',
+  '银翼杀手': 'Blade Runner',
+  '教父2': 'The Godfather: Part II',
+  '教父3': 'The Godfather: Part III',
+  '星球大战': 'Star Wars',
+  '马达加斯加': 'Madagascar',
+  '怪物史莱克': 'Shrek',
+  '史莱克': 'Shrek',
+  '加勒比海盗': 'Pirates of the Caribbean: The Curse of the Black Pearl',
+  '速度与激情': 'The Fast and the Furious',
+  '碟中谍': 'Mission: Impossible',
+  '谍影重重': 'The Bourne Identity',
+  '珍珠港': 'Pearl Harbor',
+  '2012': '2012',
+  '后天': 'The Day After Tomorrow',
+  '小鬼当家': 'Home Alone',
+  '死亡诗社': 'Dead Poets Society',
+  '音乐之声': 'The Sound of Music',
+  '乱世佳人': 'Gone with the Wind',
+  '卡萨布兰卡': 'Casablanca',
+  '公民凯恩': 'Citizen Kane',
+  '十二怒汉': '12 Angry Men',
+  '飞越疯人院': 'One Flew Over the Cuckoo\'s Nest',
+  '闻香识女人': 'Scent of a Woman',
+  '海上钢琴师': 'The Legend of 1900',
+  '天堂电影院': 'Cinema Paradiso',
+  '美丽心灵': 'A Beautiful Mind',
+  '阿甘正传': 'Forrest Gump',
+  '教父': 'The Godfather',
+  '肖申克': 'The Shawshank Redemption',
+  '肖申克的救赎': 'The Shawshank Redemption',
+  '盗梦空间': 'Inception',
+  '星际穿越': 'Interstellar',
+  '千与千寻': 'Spirited Away'
+};
