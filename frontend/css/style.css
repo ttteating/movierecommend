@@ -1202,6 +1202,15 @@ img { display: block; }
 .toast-warn .toast-dot { background: #ff9d3c; }
 .toast-error .toast-dot { background: var(--red); }
 
+/* 搜索中文名自动翻译提示 */
+.search-mapped-note {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 12.5px; color: var(--text2);
+  background: rgba(46, 194, 126, 0.1); border: 1px solid rgba(46, 194, 126, 0.35);
+  padding: 5px 14px; border-radius: 999px; margin: 10px 0 0;
+}
+.search-mapped-note b { color: var(--green); }
+
 /* ============ 评分一键档位（1-5 分全部可选） ============ */
 .score-chips {
   display: flex; gap: 8px; flex-wrap: wrap;

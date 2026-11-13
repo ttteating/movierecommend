@@ -30,7 +30,34 @@
       await this.restoreSession();
       this.renderTopbar();
       window.addEventListener('hashchange', () => this.route());
+      /* 演示模式：明确提示当前只有内置演示数据，避免误以为连的是真实后端 */
+      if (Net.mode === 'mock' && !sessionStorage.getItem('mock_notified')) {
+        sessionStorage.setItem('mock_notified', '1');
+        setTimeout(() => {
+          UI.toast('演示模式：后端未连接，当前为内置演示数据。启动后端后刷新页面即可自动切换在线模式。', 'warn');
+        }, 800);
+      }
       this.route();
+    },
+
+    /* 中文片名 → 英文片名（数据库片名为英文，搜索时自动翻译） */
+    zhToEn(q) {
+      if (!q || !/[\u4e00-\u9fa5]/.test(q)) return null;
+      const dict = {};
+      (window.MOCK_MOVIES || []).forEach(m => {
+        if (m.name_zh && m.moviename) dict[m.name_zh] = m.moviename;
+      });
+      Object.assign(dict, window.ZH2EN_EXTRA || {});
+      const qq = q.trim();
+      if (dict[qq]) return dict[qq];
+      /* 模糊匹配：取能包含查询词的最长中文名 */
+      let best = null;
+      Object.keys(dict).forEach(zh => {
+        if (zh.indexOf(qq) >= 0 || qq.indexOf(zh) >= 0) {
+          if (!best || zh.length > best.length) best = zh;
+        }
+      });
+      return best ? dict[best] : null;
     },
 
     /* 加载分类列表：真实接口 GET /api/movies/categories，失败时用真实库 22 类兜底 */
@@ -689,10 +716,17 @@
       const view = document.getElementById('view');
       const q = this.state.search.q || '';
       const cat = this.state.filterCat;
+      /* 数据库片名为英文：中文查询自动翻译成英文片名再请求后端 */
+      const zhMapped = this.zhToEn(q);
+      const apiQ = zhMapped || q;
+      const mappedNote = zhMapped
+        ? `<div class="search-mapped-note">🔤 已按中文名自动匹配英文片名：<b>${UI.esc(zhMapped)}</b></div>`
+        : '';
       view.innerHTML = `
         <section class="page">
           <div class="page-head">
             <h1 class="page-title">搜索<span class="page-title-sub">${q ? '“' + UI.esc(q) + '”' : '全部影片'}${cat ? ' · ' + UI.esc(this.catLabel(cat)) : ''}</span></h1>
+            ${mappedNote}
             <div class="sort-tabs" id="sortTabs">
               <button type="button" class="sort-tab ${this.state.search.sort === 'rating' ? 'active' : ''}" data-sort="rating">评分最高</button>
               <button type="button" class="sort-tab ${this.state.search.sort === 'popularity' ? 'active' : ''}" data-sort="popularity">热度最高</button>
@@ -712,14 +746,21 @@
       const grid = document.getElementById('searchGrid');
       try {
         const res = await Api.movies({
-          q: q || null, category_id: cat ? cat.id : null,
+          q: apiQ || null, category_id: cat ? cat.id : null,
           sort_by: this.state.search.sort, order: 'desc',
           page: this.state.search.page, page_size: 24
         });
         const items = res.data.items || [];
         const total = res.data.total || 0;
-        grid.innerHTML = items.length ? items.map(m => this.movieCard(m, {})).join('')
-          : `<div class="state-box"><div class="state-ico">🔍</div><div class="state-title">没有找到相关影片</div><div class="state-sub">试试更换关键词或分类筛选</div></div>`;
+        if (items.length) {
+          grid.innerHTML = items.map(m => this.movieCard(m, {})).join('');
+        } else {
+          const isZh = /[\u4e00-\u9fa5]/.test(q);
+          const hint = isZh
+            ? '数据库片名均为英文（如 Shawshank、Avatar、Godfather）。已尝试中文名自动翻译，若仍未找到，请直接输入英文片名，或检查后端是否已启动（左下角应显示“在线模式”）。'
+            : '试试更换关键词，或检查后端是否已启动（左下角应显示“在线模式”）。';
+          grid.innerHTML = `<div class="state-box"><div class="state-ico">🔍</div><div class="state-title">没有找到相关影片</div><div class="state-sub">${UI.esc(hint)}</div></div>`;
+        }
         this.bindCardActions(grid);
         this.renderPager('searchPager', total, 24, this.state.search.page, page => {
           this.state.search.page = page;
