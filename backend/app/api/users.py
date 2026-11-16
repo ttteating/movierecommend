@@ -139,6 +139,20 @@ async def register_with_avatar(
     return {"code": 201, "msg": "注册成功", "userid": new_user.userid}
 
 
+@router.post("/avatar")
+async def upload_avatar(
+    request: Request,
+    avatar: UploadFile = File(...),
+    current_user: User = Depends(get_current_user),
+):
+    """上传头像图片（multipart 字段 avatar），保存后更新当前用户资料。"""
+    avatar_path = await save_avatar(avatar)
+    avatar_url = f"{str(request.base_url).rstrip('/')}{avatar_path}"
+    current_user.avatar = avatar_url
+    await current_user.save(update_fields=["avatar", "updated_at"])
+    return {"code": 200, "msg": "头像上传成功", "data": {"avatar": avatar_url}}
+
+
 @router.post("/register-legacy", status_code=status.HTTP_201_CREATED, include_in_schema=False)
 async def register_legacy(request: Request):
     """Register from JSON or multipart form data with an optional avatar file."""

@@ -67,6 +67,14 @@ const assert = (cond, msg) => {
   assert(gens.join(',') === 'Sci-Fi,Drama,Action', '类型解析');
   assert(UI.fallbackSvg('肖申克').startsWith('data:image/svg+xml'), '兜底图生成');
 
+  // 中文片名 → 英文片名（数据库片名为英文，搜索自动翻译）
+  const App2 = sandbox.App;
+  assert(App2.zhToEn('肖申克') === 'The Shawshank Redemption', '中文名翻译: 肖申克');
+  assert(App2.zhToEn('肖申克的救赎') === 'The Shawshank Redemption', '中文名翻译: 肖申克的救赎');
+  assert(App2.zhToEn('阿凡达') === 'Avatar', '中文名翻译: 阿凡达');
+  assert(App2.zhToEn('盗梦空间') === 'Inception', '中文名翻译: 盗梦空间');
+  assert(App2.zhToEn('Toy Story') === null, '英文查询不做翻译');
+
   // 电影查询
   let r = await MockSvc.movies({ sort_by: 'rating', order: 'desc', page: 1, page_size: 5 });
   assert(r.data.items.length === 5 && r.data.total >= 60, '电影分页查询');

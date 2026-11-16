@@ -307,6 +307,24 @@
       return { code: 200, msg: '密码重置成功' };
     },
 
+    uploadAvatar: async function (file) {
+      await delay();
+      const u = users.find(x => x.userid === window.Net.currentUserId());
+      if (!u) throw { status: 401, detail: '登录已失效' };
+      if (!file || !String(file.type || '').startsWith('image/')) throw { status: 415, detail: '头像必须是图片文件' };
+      if (file.size > 5 * 1024 * 1024) throw { status: 413, detail: '头像文件不能超过 5MB' };
+      // 演示模式：转 data URL 存本地
+      const dataUrl = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+      u.avatar = dataUrl;
+      saveUsers();
+      return { code: 200, msg: '头像上传成功', data: { avatar: dataUrl } };
+    },
+
     me: async function () {
       await delay();
       const u = users.find(x => x.userid === window.Net.currentUserId());
