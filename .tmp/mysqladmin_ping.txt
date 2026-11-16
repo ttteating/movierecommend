@@ -1,0 +1,12 @@
+﻿mysqladmin.exe : mysqladmin: [Warning] Using a password on the command line interface can be insecure.
+所在位置 行:1 字符: 1
++ & 'C:\Program Files\MySQL\MySQL Server 8.0\bin\mysqladmin' -uroot -p1 ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (mysqladmin: [Wa...an be insecure.:String) [], RemoteExcepti 
+   on
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+mysqladmin: connect to server at '127' failed
+error: 'Unknown MySQL server host '127' (11001)'
+Check that mysqld is running on 127 and that the port is 3306.
+You can check this by doing 'telnet 127 3306'

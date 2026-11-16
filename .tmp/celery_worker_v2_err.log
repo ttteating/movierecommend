@@ -1,0 +1,20 @@
+[2026-11-14 23:15:01,229: INFO/MainProcess] Connected to redis://:**@127.0.0.1:6379/0
+[2026-11-14 23:15:01,237: INFO/MainProcess] mingle: searching for neighbors
+[2026-11-14 23:15:02,318: INFO/MainProcess] mingle: all alone
+[2026-11-14 23:15:02,414: INFO/MainProcess] celery@LAPTOP-F55396L5 ready.
+[2026-11-14 23:15:02,421: INFO/MainProcess] Task recommendation.refresh_user[1db75c74-02d7-4135-95a0-82f7509aeafa] received
+[2026-11-14 23:15:02,947: INFO/MainProcess] recommendation_published request_id=0143fe1d57a7434c88387b3a224bbd6b user_id=28256 items=20 algorithm=als-personalized-rerank-v1-o0.75-p0.1-g0.15-f0.1 cache_written=True hot_pool_available=True
+[2026-11-14 23:15:02,951: INFO/MainProcess] Tortoise-ORM shutdown
+[2026-11-14 23:15:02,959: INFO/MainProcess] Task recommendation.refresh_user[1db75c74-02d7-4135-95a0-82f7509aeafa] succeeded in 0.5310000000026776s: {'request_id': '0143fe1d57a7434c88387b3a224bbd6b', 'count': 20, 'reused': False, 'cache_written': True, 'hot_pool_available': True}
+[2026-11-14 23:17:39,159: INFO/MainProcess] Task recommendation.generate[d459f6ab41cb43e78e7993cac2adc010] received
+[2026-11-14 23:17:39,262: INFO/MainProcess] recommendation_published request_id=d459f6ab41cb43e78e7993cac2adc010 user_id=28256 items=20 algorithm=als-personalized-rerank-v1-o0.75-p0.1-g0.15-f0.1 cache_written=True hot_pool_available=True
+[2026-11-14 23:17:39,264: INFO/MainProcess] Tortoise-ORM shutdown
+[2026-11-14 23:17:39,271: INFO/MainProcess] Task recommendation.generate[d459f6ab41cb43e78e7993cac2adc010] succeeded in 0.10899999999674037s: {'request_id': 'd459f6ab41cb43e78e7993cac2adc010', 'count': 20, 'reused': False, 'cache_written': True, 'hot_pool_available': True}
+[2026-11-14 23:18:08,496: INFO/MainProcess] Task recommendation.generate[fd2fa48e6c064e31858599d03e8158ed] received
+[2026-11-14 23:18:08,580: INFO/MainProcess] recommendation_published request_id=fd2fa48e6c064e31858599d03e8158ed user_id=28256 items=20 algorithm=als-personalized-rerank-v1-o0.75-p0.1-g0.15-f0.1 cache_written=True hot_pool_available=True
+[2026-11-14 23:18:08,582: INFO/MainProcess] Tortoise-ORM shutdown
+[2026-11-14 23:18:08,592: INFO/MainProcess] Task recommendation.generate[fd2fa48e6c064e31858599d03e8158ed] succeeded in 0.09400000001187436s: {'request_id': 'fd2fa48e6c064e31858599d03e8158ed', 'count': 20, 'reused': False, 'cache_written': True, 'hot_pool_available': True}
+[2026-11-14 23:18:32,708: INFO/MainProcess] Task recommendation.generate[9440cc4bec374e0c837e0e5303078755] received
+[2026-11-14 23:18:32,787: INFO/MainProcess] recommendation_published request_id=9440cc4bec374e0c837e0e5303078755 user_id=28256 items=20 algorithm=als-personalized-rerank-v1-o0.75-p0.1-g0.15-f0.1 cache_written=True hot_pool_available=True
+[2026-11-14 23:18:32,791: INFO/MainProcess] Tortoise-ORM shutdown
+[2026-11-14 23:18:32,799: INFO/MainProcess] Task recommendation.generate[9440cc4bec374e0c837e0e5303078755] succeeded in 0.09399999999732245s: {'request_id': '9440cc4bec374e0c837e0e5303078755', 'count': 20, 'reused': False, 'cache_written': True, 'hot_pool_available': True}

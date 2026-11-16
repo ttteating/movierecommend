@@ -1,0 +1,39 @@
+INFO:     Started server process [39888]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
+redis_cache_set_failed key=movies:list::0:rating:desc:1:10 error=ResponseError
+redis_cache_set_failed key=movies:list::0:rating:desc:1:30 error=ResponseError
+redis_cache_set_failed key=movies:list::0:release_time:desc:1:24 error=ResponseError
+redis_cache_set_failed key=movies:list::0:rating:desc:1:10 error=ResponseError
+redis_cache_set_failed key=movies:list::0:rating:desc:1:10 error=ResponseError
+redis_cache_set_failed key=movies:list::0:rating:desc:1:30 error=ResponseError
+redis_cache_set_failed key=movies:list::0:rating:desc:1:10 error=ResponseError
+redis_cache_set_failed key=movies:list::0:release_time:desc:1:24 error=ResponseError
+redis_cache_set_failed key=movies:list::0:rating:desc:1:10 error=ResponseError
+redis_cache_set_failed key=movies:list::0:rating:desc:1:30 error=ResponseError
+redis_cache_set_failed key=movies:list::0:rating:desc:1:10 error=ResponseError
+redis_cache_set_failed key=movies:list::0:release_time:desc:1:24 error=ResponseError
+redis_cache_set_failed key=recommendation:28256:latest error=ResponseError
+redis_cache_set_failed key=recommendation:28256:latest error=ResponseError
+redis_cache_set_failed key=movies:list::0:rating:desc:1:10 error=ResponseError
+redis_cache_set_failed key=movies:list::0:rating:desc:1:30 error=ResponseError
+redis_cache_set_failed key=movies:list::0:release_time:desc:1:24 error=ResponseError
+redis_cache_set_failed key=movies:list::0:rating:desc:1:10 error=ResponseError
+redis_cache_set_failed key=recommendation:28256:latest error=ResponseError
+redis_cache_set_failed key=recommendation:task-owner:429642fb04b0419c9bb8fbf0cd469cb3 error=ResponseError
+redis_cache_set_failed key=recommendation:28256:latest error=ResponseError
+redis_cache_set_failed key=recommendation:28256:latest error=ResponseError
+redis_cache_set_failed key=movies:list::0:rating:desc:1:10 error=ResponseError
+redis_cache_set_failed key=movies:list::0:rating:desc:1:30 error=ResponseError
+redis_cache_set_failed key=movies:list::0:rating:desc:1:10 error=ResponseError
+redis_cache_set_failed key=movies:list::0:release_time:desc:1:24 error=ResponseError
+redis_cache_set_failed key=recommendation:28256:latest error=ResponseError
+redis_cache_set_failed key=movies:list::0:rating:desc:1:30 error=ResponseError
+redis_cache_set_failed key=movies:list::0:rating:desc:1:30 error=ResponseError
+redis_cache_set_failed key=recommendation:28256:latest error=ResponseError
+redis_cache_set_failed key=movies:list::0:rating:desc:1:30 error=ResponseError
+redis_cache_set_failed key=recommendation:28256:latest error=ResponseError
+redis_cache_set_failed key=movies:list::0:rating:desc:1:30 error=ResponseError
+redis_cache_set_failed key=movies:list::0:rating:desc:1:30 error=TimeoutError
+redis_cache_set_failed key=movies:list::0:rating:desc:1:30 error=TimeoutError

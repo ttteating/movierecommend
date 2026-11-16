@@ -1,0 +1,101 @@
+[2026-11-14 23:01:59,750: ERROR/MainProcess] consumer: Cannot connect to redis://:**@127.0.0.1:6379/0: unknown command `HELLO`, with args beginning with: `3`, .
+Trying again in 2.00 seconds... (1/1)
+
+[2026-11-14 23:02:01,778: CRITICAL/MainProcess] Unrecoverable error: OperationalError('unknown command `HELLO`, with args beginning with: `3`, ')
+Traceback (most recent call last):
+  File "D:\program\movie_recommend\.venv_new\Lib\site-packages\kombu\transport\virtual\base.py", line 961, in create_channel
+    return self._avail_channels.pop()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+IndexError: pop from empty list
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\program\movie_recommend\.venv_new\Lib\site-packages\kombu\connection.py", line 535, in _reraise_as_library_errors
+    yield
+  File "D:\program\movie_recommend\.venv_new\Lib\site-packages\kombu\connection.py", line 522, in _ensure_connection
+    return retry_over_time(
+           ^^^^^^^^^^^^^^^^
+  File "D:\program\movie_recommend\.venv_new\Lib\site-packages\kombu\utils\functional.py", line 331, in retry_over_time
+    return fun(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^
+  File "D:\program\movie_recommend\.venv_new\Lib\site-packages\kombu\connection.py", line 1034, in _connection_factory
+    self._connection = self._establish_connection()
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\program\movie_recommend\.venv_new\Lib\site-packages\kombu\connection.py", line 956, in _establish_connection
+    conn = self.transport.establish_connection()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\program\movie_recommend\.venv_new\Lib\site-packages\kombu\transport\virtual\base.py", line 985, in establish_connection
+    self._avail_channels.append(self.create_channel(self))
+                                ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\program\movie_recommend\.venv_new\Lib\site-packages\kombu\transport\virtual\base.py", line 963, in create_channel
+    channel = self.Channel(connection)
+              ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\program\movie_recommend\.venv_new\Lib\site-packages\kombu\transport\redis.py", line 1201, in __init__
+    self.client.ping()
+  File "D:\program\movie_recommend\.venv_new\Lib\site-packages\redis\commands\core.py", line 2037, in ping
+    return self.execute_command("PING", **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\program\movie_recommend\.venv_new\Lib\site-packages\redis\client.py", line 867, in execute_command
+    return self._execute_command(*args, **options)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\program\movie_recommend\.venv_new\Lib\site-packages\redis\client.py", line 873, in _execute_command
+    conn = self.connection or pool.get_connection()
+                              ^^^^^^^^^^^^^^^^^^^^^
+  File "D:\program\movie_recommend\.venv_new\Lib\site-packages\redis\utils.py", line 258, in wrapper
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "D:\program\movie_recommend\.venv_new\Lib\site-packages\redis\connection.py", line 3273, in get_connection
+    connection.connect()
+  File "D:\program\movie_recommend\.venv_new\Lib\site-packages\redis\connection.py", line 1028, in connect
+    self.retry.call_with_retry(
+  File "D:\program\movie_recommend\.venv_new\Lib\site-packages\redis\retry.py", line 120, in call_with_retry
+    return do()
+           ^^^^
+  File "D:\program\movie_recommend\.venv_new\Lib\site-packages\redis\connection.py", line 1029, in <lambda>
+    lambda: self.connect_check_health(
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\program\movie_recommend\.venv_new\Lib\site-packages\redis\connection.py", line 1083, in connect_check_health
+    self.on_connect_check_health(check_health=check_health)
+  File "D:\program\movie_recommend\.venv_new\Lib\site-packages\redis\connection.py", line 1186, in on_connect_check_health
+    self.handshake_metadata = self.read_response()
+                              ^^^^^^^^^^^^^^^^^^^^
+  File "D:\program\movie_recommend\.venv_new\Lib\site-packages\redis\connection.py", line 1437, in read_response
+    raise response
+redis.exceptions.ResponseError: unknown command `HELLO`, with args beginning with: `3`, 
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "D:\program\movie_recommend\.venv_new\Lib\site-packages\celery\worker\worker.py", line 203, in start
+    self.blueprint.start(self)
+  File "D:\program\movie_recommend\.venv_new\Lib\site-packages\celery\bootsteps.py", line 116, in start
+    step.start(parent)
+  File "D:\program\movie_recommend\.venv_new\Lib\site-packages\celery\bootsteps.py", line 365, in start
+    return self.obj.start()
+           ^^^^^^^^^^^^^^^^
+  File "D:\program\movie_recommend\.venv_new\Lib\site-packages\celery\worker\consumer\consumer.py", line 346, in start
+    blueprint.start(self)
+  File "D:\program\movie_recommend\.venv_new\Lib\site-packages\celery\bootsteps.py", line 116, in start
+    step.start(parent)
+  File "D:\program\movie_recommend\.venv_new\Lib\site-packages\celery\worker\consumer\connection.py", line 21, in start
+    c.connection = c.connect()
+                   ^^^^^^^^^^^
+  File "D:\program\movie_recommend\.venv_new\Lib\site-packages\celery\worker\consumer\consumer.py", line 475, in connect
+    conn = self.connection_for_read(heartbeat=self.amqheartbeat)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\program\movie_recommend\.venv_new\Lib\site-packages\celery\worker\consumer\consumer.py", line 481, in connection_for_read
+    return self.ensure_connected(
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\program\movie_recommend\.venv_new\Lib\site-packages\celery\worker\consumer\consumer.py", line 535, in ensure_connected
+    conn = conn.ensure_connection(
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\program\movie_recommend\.venv_new\Lib\site-packages\kombu\connection.py", line 464, in ensure_connection
+    self._ensure_connection(*args, **kwargs)
+  File "D:\program\movie_recommend\.venv_new\Lib\site-packages\kombu\connection.py", line 521, in _ensure_connection
+    with ctx():
+  File "C:\Users\Eattin\AppData\Local\Programs\Python\Python312\Lib\contextlib.py", line 158, in __exit__
+    self.gen.throw(value)
+  File "D:\program\movie_recommend\.venv_new\Lib\site-packages\kombu\connection.py", line 539, in _reraise_as_library_errors
+    raise ConnectionError(str(exc)) from exc
+kombu.exceptions.OperationalError: unknown command `HELLO`, with args beginning with: `3`, 

@@ -1,0 +1,27 @@
+﻿mysql.exe : mysql: [Warning] Using a password on the command line interface can be insecure.
+所在位置 行:1 字符: 34
++ ... recommend'; & 'C:\Program Files\MySQL\MySQL Server 8.0\bin\mysql' -ur ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (mysql: [Warning...an be insecure.:String) [], RemoteExcepti 
+   on
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+Tables_in_movierecommend_test
+adminoperationlog
+adminuser
+aerich
+category
+commentlike
+commentlike_event
+commentreport
+moviecategory
+moviecomment
+movieinfo
+personalratings
+recommendationevent
+recommendationitem
+recommendresult
+trainingdataset
+trainingrating
+user
+userfavorite

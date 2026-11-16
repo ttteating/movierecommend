@@ -11,7 +11,7 @@ window.APP_CONFIG = {
    *   'real'  —— 强制真实接口
    *   'mock'  —— 强制演示模式（不请求后端）
    */
-  DATA_MODE: 'auto',
+  DATA_MODE: 'real',
 
   /* 探测后端健康检查的超时时间（毫秒） */
   PROBE_TIMEOUT: 2500,
