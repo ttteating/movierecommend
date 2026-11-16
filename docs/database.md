@@ -1,5 +1,5 @@
 # 数据库结构说明
-本文档描述当前`movierecommend` MySQL 数据库。业务 schema 由`backend/migrations/0001_schema_upgrade.sql`创建，Tortoise ORM 定义位于 `backend/app/models.py`。当前数据库还有 Aerich 迁移元数据表 `aerich`。
+本文档描述当前`movierecommend` MySQL 数据库。基础业务 schema 由`backend/migrations/0001_schema_upgrade.sql`创建；电影评分融合字段与存量回填由 `backend/migrations/0004_movie_rating_blend.sql` 升级，电影分类关系软删除与新业务表排序规则由 `backend/migrations/0005_moviecategory_soft_delete.sql` 升级。Tortoise ORM 定义位于 `backend/app/models.py`。当前数据库还有 Aerich 迁移元数据表 `aerich`。
 
 升级备注：`user`、`adminuser` 的 `token_version` 由 `backend/migrations/0003_auth_token_version.sql` 在字段缺失时添加；API 启动不会自动执行此迁移。执行及验证说明见 `docs/mock-data-run.md` 的“数据库结构升级提示”。
 
@@ -68,14 +68,17 @@ adminuser ——< adminoperationlog
 | `releasetime` | date | 是 | 上映日期。 |
 | `director` / `leadactors` | varchar(1000) | 是 | 导演和主演文本。 |
 | `picture` | varchar(1000) | 是 | 图片地址或者存储引用。 |
-| `averating` | double(11,1) | 是 | 电影资料里的平均分；需要和站内用户评分口径区分。 |
-| `numrating` | int | 是 | 电影资料里的评分人数；需要明确其数据来源。 |
+| `averating` | double(11,1) | 是 | 对外展示的综合评分；按爬虫基准与站内评分融合。 |
+| `numrating` | int | 是 | 站内评分人数，不包含爬虫来源的投票人数。 |
+| `web_averating` | double | 是 | 最近一次保留的爬虫来源评分基准。 |
+| `web_numrating` | int | 是 | 爬虫来源的投票人数，仅用于来源信息及人气排序。 |
+| `site_averating` | double | 是 | 当前 `personalratings` 明细聚合出的站内均分。 |
 | `description` | varchar(1000) | 是 | 简介。 |
 | `typelist` | varchar(255) | 是 | 原始逗号分隔类型，保留用于兼容；规范关系看 `moviecategory`。 |
 | `updated_at` | datetime(6) | 否 | 更新时间。 |
 | `deleted_at` | datetime(6) | 是 | 电影软删除时间。 |
 
-约束：PK `movieid`，IDX `idx_movieinfo_rating(averating)`、`idx_movieinfo_popularity(numrating)`、`idx_movieinfo_release(releasetime)`、`idx_movieinfo_deleted_at(deleted_at)`。业务列表默认过滤 `deleted_at IS NOT NULL` 的电影；历史评分和反馈仍然保留。
+约束：PK `movieid`，IDX `idx_movieinfo_rating(averating)`、`idx_movieinfo_popularity(numrating)`、`idx_movieinfo_web_numrating(web_numrating)`、`idx_movieinfo_release(releasetime)`、`idx_movieinfo_deleted_at(deleted_at)`。业务列表默认过滤 `deleted_at IS NOT NULL` 的电影；历史评分和反馈仍然保留。综合分公式为 `(web_averating * 20 + site_averating * numrating) / (20 + numrating)`，写入现有一位小数字段；没有站内评分时沿用爬虫评分，没有爬虫评分时使用站内均分。`20` 是爬虫评分对应的先验权重，定义于 `backend/app/rating_aggregation.py`。
 
 ### `personalratings`：站内用户评分
 保存注册用户当前有效评分，每个用户对每部电影最多一条。修改评分是更新当前记录，不保留每次修改历史。

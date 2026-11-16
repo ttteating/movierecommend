@@ -88,3 +88,19 @@ async def cache_delete(key: str) -> None:
         await get_redis().delete(key)
     except Exception:
         return None
+
+
+async def cache_delete_pattern(pattern: str) -> None:
+    try:
+        client = get_redis()
+        keys = []
+        async for key in client.scan_iter(match=pattern, count=500):
+            keys.append(key)
+        for offset in range(0, len(keys), 500):
+            await client.delete(*keys[offset:offset + 500])
+    except Exception as exc:
+        LOG.warning(
+            "redis_cache_pattern_delete_failed pattern=%s error=%s",
+            pattern,
+            type(exc).__name__,
+        )

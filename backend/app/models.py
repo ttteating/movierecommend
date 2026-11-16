@@ -51,6 +51,9 @@ class MovieInfo(models.Model):
     picture = fields.CharField(max_length=1000, null=True)
     averating = fields.FloatField(null=True)
     numrating = fields.IntField(null=True)
+    web_averating = fields.FloatField(null=True)
+    web_numrating = fields.IntField(null=True)
+    site_averating = fields.FloatField(null=True)
     description = fields.CharField(max_length=1000, null=True)
     typelist = fields.CharField(max_length=255, null=True)
     updated_at = fields.DatetimeField(auto_now=True)
@@ -61,6 +64,7 @@ class MovieInfo(models.Model):
         indexes = (
             ("averating",),
             ("numrating",),
+            ("web_numrating",),
             ("releasetime",),
             ("deleted_at",),
         )
@@ -90,11 +94,12 @@ class MovieCategory(models.Model):
         source_field="categoryid",
         on_delete=fields.RESTRICT,
     )
+    deleted_at = fields.DatetimeField(null=True)
 
     class Meta:
         table = "moviecategory"
         unique_together = (("movie", "category"),)
-        indexes = (("category", "movie"),)
+        indexes = (("category", "movie"), ("deleted_at",))
 
 
 class PersonalRating(models.Model):

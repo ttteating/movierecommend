@@ -34,6 +34,12 @@ async def admin_login(data: AdminLogin):
         {"admin_sub": str(admin.adminid), "role": admin.role},
         auth.get_admin_token_version(admin),
     )
+    await AdminOperationLog.create(
+        admin=admin,
+        action="admin.login",
+        target_type="admin",
+        target_id=str(admin.adminid),
+    )
     return {"code": 200, "data": {**tokens, "role": admin.role}}
 
 
@@ -45,8 +51,16 @@ async def refresh_admin_token(data: RefreshTokenRequest):
 
 @router.post("/logout")
 async def logout_admin(admin: AdminUser = Depends(auth.get_current_admin)):
-    admin.token_version += 1
-    await admin.save(update_fields=["token_version", "updated_at"])
+    async with in_transaction() as connection:
+        admin.token_version += 1
+        await admin.save(update_fields=["token_version", "updated_at"], using_db=connection)
+        await AdminOperationLog.create(
+            admin=admin,
+            action="admin.logout",
+            target_type="admin",
+            target_id=str(admin.adminid),
+            using_db=connection,
+        )
     return {"code": 200, "msg": "已退出，当前及此前签发的令牌已失效；请在客户端清除本地令牌"}
 
 
@@ -241,12 +255,22 @@ async def register_admin(
         )
 
     try:
-        admin = await AdminUser.create(
-            username=data.username,
-            password=auth.get_password_hash(data.password),
-            role=data.role,
-            status="active",
-        )
+        async with in_transaction() as connection:
+            admin = await AdminUser.create(
+                username=data.username,
+                password=auth.get_password_hash(data.password),
+                role=data.role,
+                status="active",
+                using_db=connection,
+            )
+            await AdminOperationLog.create(
+                admin=admin,
+                action="admin.bootstrap_create",
+                target_type="admin",
+                target_id=str(admin.adminid),
+                detail={"role": admin.role},
+                using_db=connection,
+            )
     except IntegrityError as exc:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,

@@ -8,7 +8,8 @@ from tortoise.transactions import in_transaction
 from app.auth import get_current_user
 from app.celery_app import celery_app
 from app.models import MovieInfo, PersonalRating, User
-from app.redis_cache import cache_delete
+from app.rating_aggregation import blend_movie_rating
+from app.redis_cache import cache_delete, cache_delete_pattern
 from app.schemas import RatingSubmit
 
 
@@ -107,6 +108,23 @@ async def submit_ratings(
             if locked_user is None:
                 raise HTTPException(status_code=401, detail="用户不存在或已失效")
 
+            movies = await (
+                MovieInfo.filter(movieid__in=data.movieids)
+                .using_db(connection)
+                .select_for_update()
+                .order_by("movieid")
+                .all()
+            )
+            active_movie_ids = {
+                movie.movieid for movie in movies if movie.deleted_at is None
+            }
+            missing_movie_ids = sorted(set(data.movieids) - active_movie_ids)
+            if missing_movie_ids:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail={"movieids": missing_movie_ids},
+                )
+
             existing = await (
                 UserRating.filter(
                     user_id=current_user.userid,
@@ -154,20 +172,21 @@ async def submit_ratings(
                 .values("movie_id", "average", "count")
             )
             aggregate_by_movie = {row["movie_id"]: row for row in aggregates}
-            movies = await (
-                MovieInfo.filter(movieid__in=data.movieids)
-                .using_db(connection)
-                .all()
-            )
             for movie in movies:
                 aggregate = aggregate_by_movie.get(movie.movieid)
-                if aggregate:
-                    movie.averating = aggregate["average"]
-                    movie.numrating = aggregate["count"]
+                site_average = float(aggregate["average"]) if aggregate else None
+                site_count = int(aggregate["count"]) if aggregate else 0
+                movie.site_averating = site_average
+                movie.numrating = site_count
+                movie.averating = blend_movie_rating(
+                    movie.web_averating,
+                    site_average,
+                    site_count,
+                )
             if movies:
                 await MovieInfo.bulk_update(
                     movies,
-                    fields=["averating", "numrating"],
+                    fields=["averating", "numrating", "site_averating"],
                     using_db=connection,
                 )
     except IntegrityError as exc:
@@ -177,6 +196,8 @@ async def submit_ratings(
         ) from exc
 
     await cache_delete(f"recommendation:{current_user.userid}:latest")
+    await cache_delete_pattern("movies:list:*")
+    await cache_delete("recom:hot:global")
     refresh_queued = True
     refresh_request_id = uuid4().hex
     try:

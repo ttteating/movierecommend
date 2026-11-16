@@ -209,7 +209,7 @@ def extract_database_snapshot(spark: SparkSession, args) -> tuple[DataFrame, Dat
       SELECT mc.movieid AS movieId, c.categoryid
       FROM moviecategory mc JOIN category c ON c.categoryid=mc.categoryid
       JOIN movieinfo m ON m.movieid=mc.movieid AND m.deleted_at IS NULL
-      WHERE c.deleted_at IS NULL
+      WHERE mc.deleted_at IS NULL AND c.deleted_at IS NULL
     """
     category_map = jdbc_read(spark, category_sql, args).select(
         F.col("movieId").cast("int"), F.col("categoryid").cast("int")

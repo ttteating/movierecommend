@@ -231,10 +231,14 @@ async def _generate(user_id: int, request_id: str) -> dict:
             hot_movies = [hot_map[movie_id] for movie_id in hot_ids if movie_id in hot_map]
         else:
             hot_movies = await MovieInfo.filter(deleted_at=None).order_by(
-                "-averating", "-numrating", "movieid"
+                "-averating", "-web_numrating", "movieid"
             ).limit(max(TOP_N * 5, 100))
             await refresh_hot_cache([
-                (movie.movieid, float(movie.averating or 0) * 1_000_000 + float(movie.numrating or 0))
+                (
+                    movie.movieid,
+                    float(movie.averating or 0) * 1_000_000
+                    + float(movie.web_numrating or 0),
+                )
                 for movie in hot_movies
             ], ttl=max(CACHE_TTL, 3600))
 

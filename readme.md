@@ -122,27 +122,55 @@ python -m uvicorn app.main:app --app-dir backend --host 127.0.0.1 --port 8000
 - Swagger 文档：http://127.0.0.1:8000/docs
 - OpenAPI JSON：http://127.0.0.1:8000/openapi.json
 
-推荐生成接口还需要 Redis 和 Celery Worker。项目内的 Redis 配置会将 RDB 写入被 Git 忽略的 `data/processed/redis`，并仅监听本机回环地址。从项目根目录在一个终端启动本机 Redis：
+推荐生成接口需要 Redis 和 Celery Worker。当前开发环境使用 WSL Ubuntu 24.04 中的 Redis 7；不要再启动 `C:\Program Files\Redis` 下的 Redis 5，它不支持当前客户端使用的 `HELLO` 协议握手。Redis 监听 WSL 私有地址的 `6380` 端口，启用密码认证和 AOF 持久化；密码只从项目 `.env` 读取，不要写入 README 或提交到 Git。
+
+### 启动 Redis（WSL）
+
+首次使用时，在 PowerShell 安装 WSL Redis：
 
 ```powershell
-& 'C:\Program Files\Redis\redis-server.exe' .\backend\redis.windows.conf
+wsl -d Ubuntu-24.04 -- sudo apt-get update
+wsl -d Ubuntu-24.04 -- sudo apt-get install -y redis-server
+wsl -d Ubuntu-24.04 -- redis-server --version
 ```
 
-再在新的 PowerShell 终端从项目根目录启动 Worker：
+项目根目录 `.env` 中需要配置 `REDIS_URL` 和 `CELERY_RESULT_BACKEND`，两者使用 `6380` 端口和同一个 Redis 密码，前者使用 DB 0、后者使用 DB 1。启动脚本会读取 `.env` 中的 Redis 密码、自动更新两个 URL 的 WSL 主机地址，并在 WSL 用户目录写入权限受限的配置和持久化文件；密码不会输出到终端：
+
+```powershell
+wsl -d Ubuntu-24.04 -- bash /mnt/d/program/movie_recommend/backend/jobs/start_redis_wsl.sh
+```
+
+预期最后输出 `PONG`。Redis 配置位于 WSL 用户目录 `~/.config/movierecommend/redis.conf`，数据目录为 `~/.local/share/movie-recommend-redis`。WSL IP 可能变化；每次启动或重启 WSL 后都运行此脚本，再重启 API、Worker 和 Beat，使它们重新读取更新后的 `.env`。
+
+### 启动 Celery Worker
+
+Worker 必须常驻运行，才能消费推荐生成和评分后刷新任务。开一个新的 PowerShell 窗口，从项目根目录执行：
 
 ```powershell
 Set-Location backend
 ..\.venv_new\Scripts\celery.exe -A app.celery_app:celery_app worker --loglevel=INFO --pool=solo
 ```
 
-若使用 Celery Beat 定期提交离线 ALS 训练任务，再开一个终端执行：
+Windows 使用 `--pool=solo`。看到 `ready` 且无 Redis 连接错误即表示 Worker 已启动。若当前 PowerShell 会话继承了旧的用户级 Redis 地址，先清除旧值，使应用读取项目 `.env`，然后再启动服务：
+
+```powershell
+Remove-Item Env:REDIS_URL,Env:CELERY_RESULT_BACKEND -ErrorAction SilentlyContinue
+```
+
+运行时检查会报告 Redis、broker、Worker 和推荐测试库配置状态；从项目根目录执行：
+
+```powershell
+..\.venv_new\Scripts\python.exe backend\jobs\check_recommendation_runtime.py
+```
+
+只有在需要按周期提交离线 ALS 训练任务时才启动 Celery Beat。Beat 与 Worker 使用不同终端：
 
 ```powershell
 Set-Location backend
 ..\.venv_new\Scripts\celery.exe -A app.celery_app:celery_app beat --loglevel=INFO
 ```
 
-Beat 的周期由 `ALS_TRAIN_INTERVAL_SECONDS` 配置，默认每 7 天；Spark/Java/JDBC 还需按 `backend/jobs/check_als_environment.py` 单独检查。API 本身不会启动 Spark。Redis、Celery broker/result backend 和 ALS 共享路径通过 `.env` 中的环境变量配置；连接失败时分别检查 Redis 服务、`REDIS_URL`、Worker 状态及共享目录权限。
+Beat 的周期由 `ALS_TRAIN_INTERVAL_SECONDS` 配置，默认每 7 天；Spark/Java/JDBC 还需按 `backend/jobs/check_als_environment.py` 单独检查。API 本身不会启动 Spark。Redis、Celery broker/result backend 和 ALS 共享路径通过 `.env` 中的环境变量配置；连接失败时检查 Redis 服务、两个 Redis URL、Worker 状态及共享目录权限。
 
 ## 启动前端
 
@@ -178,7 +206,7 @@ Authorization: Bearer <access_token>
 
 ## 数据库迁移
 
-SQL 升级脚本位于 `backend/migrations/`：`0001_schema_upgrade.sql` 升级基础业务表结构，`0002_delivery_indexes_and_legacy_recommend.sql` 补充索引及旧推荐表字段，`0003_auth_token_version.sql` 为用户和管理员表添加 JWT 失效控制字段。它们不是 API 启动时执行的自动迁移；在已有数据库上手动执行前，先备份并核对目标库及脚本影响。
+SQL 升级脚本位于 `backend/migrations/`：`0001_schema_upgrade.sql` 升级基础业务表结构，`0002_delivery_indexes_and_legacy_recommend.sql` 补充索引及旧推荐表字段，`0003_auth_token_version.sql` 为用户和管理员表添加 JWT 失效控制字段，`0004_movie_rating_blend.sql` 补充电影评分融合字段，`0005_moviecategory_soft_delete.sql` 为电影分类关联增加软删除并统一新业务表排序规则。它们不是 API 启动时执行的自动迁移；在已有数据库上手动执行前，先备份并核对目标库及脚本影响。`backend/migrations/aerich/models/2_20261029160409_personalratings_zero_to_five.py` 的升级也已修正为保留评分数据并落实 1–5 约束。
 
 
 ## 停止服务

@@ -112,7 +112,7 @@ def run(sample_users: int, seed: int, output: Path) -> dict:
 
         movie_features = als.jdbc_read(
             spark,
-            "SELECT movieid AS movieId, typelist, averating, numrating "
+            "SELECT movieid AS movieId, typelist, averating, web_numrating AS numrating "
             "FROM movieinfo WHERE deleted_at IS NULL",
             args,
         ).select(

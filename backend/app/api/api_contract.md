@@ -106,8 +106,8 @@
 ### 电影与分类
 
 - `GET /api/movies/random`：无参数，返回 `data` 数组，最多 10 部有效电影，每项含 `movieid,moviename,picture`。
-- `GET /api/movies`：查询参数 `q`（片名、导演、演员或类型模糊查询，最多 100 字符）、`category_id`（正整数）、`sort_by=rating|popularity|release_time`（默认 `rating`）、`order=asc|desc`（默认 `desc`）、`page`（默认 1，最小 1）、`page_size`（默认 20，范围 1-100）。响应 `data={items,total,page,page_size}`；列表项含 `movieid,moviename,picture,averating,numrating,releasetime`。无效/已删除分类返回 `404`。列表缓存 TTL 为 120 秒。
-- `GET /api/movies/{movieid}`：返回 `data` 中电影详情字段 `movieid,moviename,releasetime,director,leadactors,picture,averating,numrating,description,typelist,categories`；`categories` 是 `{categoryid,name}` 数组，无分类时为空数组。缺失或已删除电影 `404`。
+- `GET /api/movies`：查询参数 `q`（片名、导演、演员或类型模糊查询，最多 100 字符）、`category_id`（正整数）、`sort_by=rating|popularity|release_time`（默认 `rating`）、`order=asc|desc`（默认 `desc`）、`page`（默认 1，最小 1）、`page_size`（默认 20，范围 1-100）。响应 `data={items,total,page,page_size}`；列表项含 `movieid,moviename,picture,averating,numrating,releasetime`。`averating` 为爬虫基准与站内评分融合后的综合分，`numrating` 为站内评分人数；人气排序使用独立的爬虫评分人数。无效/已删除分类返回 `404`。列表缓存 TTL 为 120 秒。
+- `GET /api/movies/{movieid}`：返回 `data` 中电影详情字段 `movieid,moviename,releasetime,director,leadactors,picture,averating,numrating,description,typelist,categories`；`averating` 为融合后的综合分，`numrating` 为站内评分人数；`categories` 是 `{categoryid,name}` 数组，无分类时为空数组。缺失或已删除电影 `404`。
 - `GET /api/movies/categories`：返回有效分类的 `data` 数组，每项 `{categoryid,name}`。
 - `POST /api/movies`：管理员创建电影。必填正整数 `movieid`、`moviename`；可选 `releasetime`（`YYYY-MM-DD`）、`director,leadactors,picture,description,typelist`、`category_ids`（最多 100 个分类 ID）。`movieid` 沿用现有数据主键，不自动生成。成功 `201`。
 - `PUT /api/movies/{movieid}`：管理员可提交上述可更新字段的非空子集；`category_ids` 一旦提供即替换全部关联，空数组清空关联。
@@ -124,7 +124,7 @@
 {"movieids":[1,2],"ratings":[5,4]}
 ```
 
-数组必须非空且长度相同，电影 ID 为正整数且批次内不重复，分数为 1-5 整数。可选兼容字段 `userid` 必须等于 token 用户 ID。已存在评分更新，不存在则新增；写入使用事务。成功返回 `count`、`recommendation_refresh_queued` 和可选的 `recommendation_request_id`。评分事务提交后会尝试异步刷新该用户推荐；队列不可用不会撤销评分。不存在/软删除电影 `404`，用户 ID 不匹配 `403`。
+数组必须非空且长度相同，电影 ID 为正整数且批次内不重复，分数为 1-5 整数。可选兼容字段 `userid` 必须等于 token 用户 ID。已存在评分更新，不存在则新增；写入使用事务，并同步聚合站内均分与人数，按爬虫评分先验权重 20 重算 `movieinfo.averating` 综合分。成功返回 `count`、`recommendation_refresh_queued` 和可选的 `recommendation_request_id`。评分事务提交后会尝试异步刷新该用户推荐，并清理电影列表和热门榜缓存；队列不可用不会撤销评分。不存在/软删除电影 `404`，用户 ID 不匹配 `403`。
 
 **我的评分** `GET /api/ratings/me`：分页参数 `page` 默认 1、`page_size` 默认 20（1-100）；返回 `data={items,total,page,page_size}`，评分项含 `ratingid,movieid,moviename,picture,rating,rated_at`。
 

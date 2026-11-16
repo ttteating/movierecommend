@@ -37,9 +37,20 @@ async def _set_movie_categories(movie: MovieInfo, category_ids: list[int], using
     relation_query = MovieCategory.filter(movie_id=movie.movieid)
     if using_db is not None:
         relation_query = relation_query.using_db(using_db)
-    await relation_query.delete()
+    existing = await relation_query.select_for_update().all()
+    existing_by_category = {row.category_id: row for row in existing}
+    now = datetime.now(timezone.utc)
+    wanted = {category.categoryid for category in categories}
+    for category_id, relation in existing_by_category.items():
+        if category_id in wanted and relation.deleted_at is not None:
+            relation.deleted_at = None
+            await relation.save(update_fields=["deleted_at"], using_db=using_db)
+        elif category_id not in wanted and relation.deleted_at is None:
+            relation.deleted_at = now
+            await relation.save(update_fields=["deleted_at"], using_db=using_db)
     for category in categories:
-        await MovieCategory.create(movie=movie, category=category, using_db=using_db)
+        if category.categoryid not in existing_by_category:
+            await MovieCategory.create(movie=movie, category=category, using_db=using_db)
 
 
 @router.get("/categories")
@@ -127,7 +138,9 @@ async def delete_category(categoryid: int, admin: AdminUser = Depends(auth.get_c
     async with in_transaction() as connection:
         category.deleted_at = datetime.now(timezone.utc)
         await category.save(update_fields=["deleted_at"], using_db=connection)
-        await MovieCategory.filter(category_id=categoryid).using_db(connection).delete()
+        await MovieCategory.filter(category_id=categoryid, deleted_at=None).using_db(connection).update(
+            deleted_at=datetime.now(timezone.utc)
+        )
         await _write_log(admin, "category.delete", "category", categoryid, {"name": category.name}, using_db=connection)
     return {"code": 200, "msg": "分类已软删除"}
 
@@ -183,7 +196,7 @@ async def list_movies(
                 detail="分类不存在或已删除",
             )
         movie_ids = await MovieCategory.filter(
-            category_id=category_id,
+            category_id=category_id, deleted_at=None,
         ).values_list("movie_id", flat=True)
         if not movie_ids:
             return {
@@ -194,7 +207,7 @@ async def list_movies(
 
     sort_fields = {
         "rating": "averating",
-        "popularity": "numrating",
+        "popularity": "web_numrating",
         "release_time": "releasetime",
     }
     sort_field = sort_fields[sort_by]
@@ -250,7 +263,7 @@ async def get_movie_detail(movieid: int):
         "description": movie.description,
         "typelist": movie.typelist,
     }
-    category_ids = await MovieCategory.filter(movie_id=movieid).values_list("category_id", flat=True)
+    category_ids = await MovieCategory.filter(movie_id=movieid, deleted_at=None).values_list("category_id", flat=True)
     movie_data["categories"] = await Category.filter(
         categoryid__in=category_ids,
         deleted_at=None,

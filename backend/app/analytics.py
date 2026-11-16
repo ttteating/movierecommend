@@ -17,6 +17,7 @@ from app.models import (
     PersonalRating,
     RecommendationEvent,
     RecommendationItem,
+    TrainingRating,
     User,
     UserFavorite,
 )
@@ -25,7 +26,7 @@ from app.models import (
 async def get_rating_distribution() -> list[dict[str, Any]]:
     """Return counts grouped by the current 1-5 rating value."""
     return await (
-        PersonalRating.all()
+        PersonalRating.filter(user__deleted_at=None, movie__deleted_at=None)
         .group_by("rating")
         .annotate(total=Count("ratingid"))
         .values("rating", "total")
@@ -35,7 +36,7 @@ async def get_rating_distribution() -> list[dict[str, Any]]:
 async def get_movie_rating_summaries() -> list[dict[str, Any]]:
     """Return current average and rating count for each movie with ratings."""
     return await (
-        PersonalRating.all()
+        PersonalRating.filter(user__deleted_at=None, movie__deleted_at=None)
         .group_by("movie_id")
         .annotate(
             average_rating=Avg("rating"),
@@ -58,7 +59,10 @@ async def get_comment_moderation_counts() -> list[dict[str, Any]]:
 async def get_report_status_counts() -> list[dict[str, Any]]:
     """Count reports by pending/accepted/rejected status."""
     return await (
-        CommentReport.all()
+        CommentReport.filter(
+            comment__deleted_at=None,
+            reporter__deleted_at=None,
+        )
         .group_by("status")
         .annotate(total=Count("reportid"))
         .values("status", "total")
@@ -68,7 +72,11 @@ async def get_report_status_counts() -> list[dict[str, Any]]:
 async def get_active_favorite_counts() -> list[dict[str, Any]]:
     """Count active favorites by want-to-watch/watched state."""
     return await (
-        UserFavorite.filter(deleted_at__isnull=True)
+        UserFavorite.filter(
+            deleted_at__isnull=True,
+            user__deleted_at=None,
+            movie__deleted_at=None,
+        )
         .group_by("status")
         .annotate(total=Count("id"))
         .values("status", "total")
@@ -91,6 +99,8 @@ async def get_recommendation_event_counts(
         RecommendationEvent.filter(
             created_at__gte=start_at,
             created_at__lt=end_at,
+            recommendation__user__deleted_at=None,
+            recommendation__movie__deleted_at=None,
         )
         .group_by("event_type")
         .annotate(total=Count("eventid"))
@@ -110,7 +120,12 @@ async def get_system_counts() -> dict[str, Any]:
             "active": await MovieInfo.filter(deleted_at=None).count(),
             "deleted": await MovieInfo.filter(deleted_at__not_isnull=True).count(),
         },
-        "ratings": await PersonalRating.all().count(),
+        "ratings": await PersonalRating.filter(
+            user__deleted_at=None, movie__deleted_at=None,
+        ).count(),
+        "external_training_ratings": await TrainingRating.filter(
+            movie__deleted_at=None,
+        ).count(),
         "comments": {
             "visible": await MovieComment.filter(
                 deleted_at=None,
@@ -126,11 +141,19 @@ async def get_system_counts() -> dict[str, Any]:
         "reports": await get_report_status_counts(),
         "favorites": await get_active_favorite_counts(),
         "likes": {
-            "currently_active": await CommentLike.filter(is_active=True).count(),
-            "like_events": await CommentLikeEvent.filter(action="like").count(),
-            "unlike_events": await CommentLikeEvent.filter(action="unlike").count(),
+            "currently_active": await CommentLike.filter(
+                is_active=True, user__deleted_at=None, comment__deleted_at=None,
+            ).count(),
+            "like_events": await CommentLikeEvent.filter(
+                action="like", user__deleted_at=None, comment__deleted_at=None,
+            ).count(),
+            "unlike_events": await CommentLikeEvent.filter(
+                action="unlike", user__deleted_at=None, comment__deleted_at=None,
+            ).count(),
         },
-        "recommendation_items": await RecommendationItem.all().count(),
+        "recommendation_items": await RecommendationItem.filter(
+            user__deleted_at=None, movie__deleted_at=None,
+        ).count(),
         "admin_operations": await AdminOperationLog.all().count(),
     }
 

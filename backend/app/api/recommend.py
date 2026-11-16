@@ -122,17 +122,17 @@ async def get_similar_movies(movieid: int, limit: int = Query(10, ge=1, le=50)):
     movie = await MovieInfo.get_or_none(movieid=movieid, deleted_at=None)
     if movie is None:
         raise HTTPException(status_code=404, detail="电影不存在或已删除")
-    source_categories = set(await MovieCategory.filter(movie_id=movieid).values_list("category_id", flat=True))
+    source_categories = set(await MovieCategory.filter(movie_id=movieid, deleted_at=None).values_list("category_id", flat=True))
     if source_categories:
         candidate_ids = await (
-            MovieCategory.filter(category_id__in=source_categories)
+            MovieCategory.filter(category_id__in=source_categories, deleted_at=None)
             .exclude(movie_id=movieid)
             .order_by("movie_id")
             .distinct()
             .limit(5000)
             .values_list("movie_id", flat=True)
         )
-        candidate_categories = await MovieCategory.filter(movie_id__in=candidate_ids).values(
+        candidate_categories = await MovieCategory.filter(movie_id__in=candidate_ids, deleted_at=None).values(
             "movie_id", "category_id",
         )
         category_map: dict[int, set[int]] = {}
@@ -175,7 +175,10 @@ async def get_similar_movies(movieid: int, limit: int = Query(10, ge=1, le=50)):
     candidates = await MovieInfo.filter(
         movieid__in=candidate_ids,
         deleted_at=None,
-    ).values("movieid", "moviename", "picture", "averating", "numrating", "releasetime")
+    ).values(
+        "movieid", "moviename", "picture", "averating", "numrating",
+        "web_numrating", "releasetime",
+    )
     ranked = []
     for row in candidates:
         candidate_set = similarity_sets[row["movieid"]]
@@ -187,11 +190,17 @@ async def get_similar_movies(movieid: int, limit: int = Query(10, ge=1, le=50)):
         key=lambda row: (
             -row["similarity_score"],
             -(row["averating"] or 0),
-            -(row["numrating"] or 0),
+            -(row["web_numrating"] or 0),
             row["movieid"],
         )
     )
-    return {"code": 200, "data": ranked[:limit]}
+    return {
+        "code": 200,
+        "data": [
+            {key: value for key, value in row.items() if key != "web_numrating"}
+            for row in ranked[:limit]
+        ],
+    }
 
 
 @router.post("/event")

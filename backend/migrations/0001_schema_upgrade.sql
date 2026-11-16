@@ -151,9 +151,11 @@ CREATE TABLE `moviecategory` (
   `id` bigint NOT NULL AUTO_INCREMENT,
   `movieid` int NOT NULL,
   `categoryid` int NOT NULL,
+  `deleted_at` datetime(6) NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_moviecategory_movie_category` (`movieid`, `categoryid`),
   KEY `idx_moviecategory_category_movie` (`categoryid`, `movieid`),
+  KEY `idx_moviecategory_deleted_at` (`deleted_at`),
   CONSTRAINT `fk_moviecategory_movie`
     FOREIGN KEY (`movieid`) REFERENCES `movieinfo` (`movieid`) ON DELETE RESTRICT,
   CONSTRAINT `fk_moviecategory_category`
@@ -364,6 +366,20 @@ CREATE TABLE `recommendationevent` (
     FOREIGN KEY (`recommendationid`)
     REFERENCES `recommendationitem` (`recommendationid`) ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+ALTER TABLE `trainingdataset` CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;
+ALTER TABLE `trainingrating` CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;
+ALTER TABLE `category` CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;
+ALTER TABLE `moviecategory` CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;
+ALTER TABLE `moviecomment` CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;
+ALTER TABLE `commentlike` CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;
+ALTER TABLE `commentlike_event` CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;
+ALTER TABLE `adminuser` CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;
+ALTER TABLE `commentreport` CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;
+ALTER TABLE `userfavorite` CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;
+ALTER TABLE `adminoperationlog` CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;
+ALTER TABLE `recommendationitem` CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;
+ALTER TABLE `recommendationevent` CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;
 
 -- `personalratings.timestamp` is retained temporarily for rollback/audit.
 -- Drop it only after the application has switched to `rated_at` and UTC values

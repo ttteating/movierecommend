@@ -7,10 +7,9 @@ async def upgrade(db: BaseDBAsyncClient) -> str:
     return """
         ALTER TABLE `personalratings`
           DROP CHECK `chk_personalratings_rating`;
-        DELETE FROM `personalratings`;
         ALTER TABLE `personalratings`
           ADD CONSTRAINT `chk_personalratings_rating`
-          CHECK (`rating` BETWEEN 0 AND 5);
+          CHECK (`rating` BETWEEN 1 AND 5);
     """
 
 
