@@ -17,6 +17,7 @@
       filterCat: null,      // 头部筛选器 {id, name}
       categories: [],       // 分类列表 [{categoryid, name}]（真实接口或演示 18 类）
       search: { q: '', page: 1, sort: 'rating', order: 'desc' },
+      topPage: 1,           // 全部影片分页
       heroTimer: null,
       cleanup: []           // 视图清理函数
     },
@@ -682,6 +683,14 @@
 
     bindReviewActions(scope) {
       scope.querySelectorAll('.review-card').forEach(c => {
+        /* 点击整张影评卡片 → 跳转对应电影详情页 */
+        if (c.dataset.movie) {
+          c.classList.add('clickable');
+          c.addEventListener('click', e => {
+            if (e.target.closest('[data-act]')) return;
+            location.hash = '#/movie/' + c.dataset.movie;
+          });
+        }
         c.querySelectorAll('[data-act]').forEach(b => b.addEventListener('click', e => {
           e.stopPropagation();
           const act = b.dataset.act;
@@ -1308,7 +1317,6 @@
         });
       };
       renderStrip();
-      UI.bindRailPager(track, null, null, null);
 
       const btn = document.getElementById('batchSubmitBtn');
       this.updateBatchBtn = () => {
@@ -1416,7 +1424,7 @@
             </div>`;
         }).join('');
 
-        const words = this.scoreWord.bind(this);
+        const words = self.scoreWord.bind(self);
         grid.querySelectorAll('.rate-card').forEach(card => {
           const id = Number(card.dataset.id);
           const chips = card.querySelectorAll('.rc-chip');
@@ -1480,6 +1488,30 @@
     },
 
     /* ================= 猜你喜欢（推荐结果） ================= */
+    recCacheKey() {
+      const user = Net.currentUser();
+      return 'mrz_rec_cache_' + (user ? user.userid : 0);
+    },
+    saveRecCache(requestId, items) {
+      try {
+        sessionStorage.setItem(this.recCacheKey(), JSON.stringify({ request_id: requestId, items }));
+      } catch (e) { /* 忽略容量限制 */ }
+    },
+    async enrichRecItems(items) {
+      if (Net.mode !== 'real' || !items || !items.length) return items;
+      return Promise.all(items.map(async it => {
+        try {
+          const d = await Api.movieDetail(it.movieid);
+          const m = d.data;
+          return Object.assign({}, it, {
+            picture: m.picture, averating: m.averating, numrating: m.numrating,
+            typelist: m.typelist, description: m.description, director: m.director,
+            leadactors: m.leadactors, releasetime: m.releasetime
+          });
+        } catch (e) { return it; }
+      }));
+    },
+
     async loadRecommend() {
       const view = document.getElementById('view');
       const user = Net.currentUser();
@@ -1501,57 +1533,66 @@
         </section>`;
 
       const body = document.getElementById('recBody');
+
+      /* 上次成功渲染的结果缓存：进出详情页/网络异常时兜底,内容不再消失 */
+      let cached = null;
+      try { cached = JSON.parse(sessionStorage.getItem(this.recCacheKey()) || 'null'); } catch (e) { cached = null; }
+
       let bag = null;
+      let fetchFailed = false;
       try {
         bag = await Api.recommendResult();
       } catch (e) {
-        bag = null;
+        fetchFailed = true;
       }
 
-      const pendingRefreshId = Net.mode === 'real'
-        ? sessionStorage.getItem('recommendation_refresh_request_id') : null;
-      if (pendingRefreshId) {
-        bag = await this.waitForRecommendationRequest(pendingRefreshId, bag);
-        if (bag && bag.request_id === pendingRefreshId) {
-          sessionStorage.removeItem('recommendation_refresh_request_id');
-        } else {
-          UI.toast('推荐刷新仍在后台处理，当前先显示最近一次结果', 'warn');
-        }
-      }
+      let items = (bag && bag.items && bag.items.length) ? bag.items
+        : (cached && cached.items && cached.items.length) ? cached.items : [];
+      const usingCached = !(bag && bag.items && bag.items.length);
+      this.recRequestId = (bag && bag.request_id) || (cached && cached.request_id) || null;
 
-      const items = bag && bag.items ? bag.items : [];
-      this.recRequestId = bag ? bag.request_id : null;
-
-      /* 真实接口的推荐项不含海报/简介，逐部补拉详情以还原卡片信息 */
-      if (Net.mode === 'real' && items.length) {
-        items.length = 0;
-        const enriched = await Promise.all((bag.items || []).map(async it => {
-          try {
-            const d = await Api.movieDetail(it.movieid);
-            const m = d.data;
-            return Object.assign({}, it, {
-              picture: m.picture, averating: m.averating, numrating: m.numrating,
-              typelist: m.typelist, description: m.description, director: m.director,
-              leadactors: m.leadactors, releasetime: m.releasetime
-            });
-          } catch (e) { return it; }
-        }));
-        items.push(...enriched);
-      }
-
+      /* 没有任何结果：空状态 + 自动触发一次生成,无需手动点按钮 */
       if (!items.length) {
         body.innerHTML = `
           <div class="state-box rec-empty">
             <div class="state-ico">🎯</div>
-            <div class="state-title">还没有为您生成的推荐结果</div>
-            <div class="state-sub">${Net.mode === 'mock' ? '先参与评分，再生成您的推荐列表' : '提交推荐任务后，系统会读取离线 ALS 候选并更新您的推荐列表'}</div>
+            <div class="state-title">正在为您准备推荐结果…</div>
+            <div class="state-sub">${Net.mode === 'mock' ? '首次进入将自动生成推荐列表' : '系统正在读取离线 ALS 候选并更新您的推荐列表'}</div>
             <button type="button" class="btn-gold lg" id="recGenerateBtn">✨ 生成我的专属推荐</button>
           </div>`;
         document.getElementById('recGenerateBtn').addEventListener('click', () => this.runSparkFlow(body));
+        if (!this.state.recAutoFired) {
+          this.state.recAutoFired = true;
+          setTimeout(() => this.runSparkFlow(body), 500);
+        }
         return;
       }
 
+      /* 真实模式：补拉海报/简介详情 */
+      items = await this.enrichRecItems(items);
+      this.saveRecCache(this.recRequestId, items);
       this.renderRecommendResult(body, items);
+      if (usingCached) {
+        UI.toast(fetchFailed ? '网络异常，当前显示最近一次推荐结果' : '当前显示最近一次推荐结果', 'warn');
+      }
+
+      /* 评分触发的后台刷新：不阻塞渲染,完成后自动更新视图 */
+      const pendingRefreshId = Net.mode === 'real'
+        ? sessionStorage.getItem('recommendation_refresh_request_id') : null;
+      if (pendingRefreshId && this.recRequestId !== pendingRefreshId) {
+        this.waitForRecommendationRequest(pendingRefreshId, bag).then(async newer => {
+          if (newer && newer.items && newer.items.length && newer.request_id === pendingRefreshId) {
+            sessionStorage.removeItem('recommendation_refresh_request_id');
+            const enr = await this.enrichRecItems(newer.items);
+            this.recRequestId = newer.request_id;
+            this.saveRecCache(newer.request_id, enr);
+            if (document.getElementById('recBody') === body) {
+              this.renderRecommendResult(body, enr);
+              UI.toast('推荐列表已更新 ✨', 'ok');
+            }
+          }
+        });
+      }
     },
 
     async waitForRecommendationRequest(requestId, initialResult, timeoutMs = 15000) {
@@ -1791,16 +1832,28 @@
               }
             }
             this.recRequestId = bag ? bag.request_id : null;
-            const items = bag && bag.items ? bag.items : [];
-            if (items.length) this.renderRecommendResult(bodyEl, items);
-            else {
-              bodyEl.innerHTML = `
-                <div class="state-box">
-                  <div class="state-ico">🎯</div>
-                  <div class="state-title">推荐任务已提交</div>
-                  <div class="state-sub">${Net.mode === 'real' ? '后端任务队列尚未产出结果，请稍后刷新页面查看（或演示模式下自动生成）' : '暂时没有可展示的推荐结果'}</div>
-                  <button type="button" class="btn-primary" onclick="location.reload()">刷新查看</button>
-                </div>`;
+            let items = bag && bag.items ? bag.items : [];
+            if (items.length) {
+              items = await this.enrichRecItems(items);
+              this.saveRecCache(this.recRequestId, items);
+              this.renderRecommendResult(bodyEl, items);
+            } else {
+              /* 生成中:先尝试用缓存内容,避免页面空白 */
+              let cached = null;
+              try { cached = JSON.parse(sessionStorage.getItem(this.recCacheKey()) || 'null'); } catch (e) { cached = null; }
+              if (cached && cached.items && cached.items.length) {
+                this.recRequestId = cached.request_id || this.recRequestId;
+                this.renderRecommendResult(bodyEl, cached.items);
+                UI.toast('推荐任务已提交,当前先显示最近一次结果', 'warn');
+              } else {
+                bodyEl.innerHTML = `
+                  <div class="state-box">
+                    <div class="state-ico">🎯</div>
+                    <div class="state-title">推荐任务已提交</div>
+                    <div class="state-sub">${Net.mode === 'real' ? '后端任务队列尚未产出结果，请稍后刷新页面查看（或演示模式下自动生成）' : '暂时没有可展示的推荐结果'}</div>
+                    <button type="button" class="btn-primary" onclick="location.reload()">刷新查看</button>
+                  </div>`;
+              }
             }
           } catch (e) {
             UI.toast('读取推荐结果失败：' + (e.detail || ''), 'warn');
@@ -1810,23 +1863,46 @@
       setTimeout(done, total + 200);
     },
 
-    /* ================= 高分口碑榜 ================= */
+    /* ================= 全部影片（原高分口碑榜） ================= */
     async loadTop() {
       const view = document.getElementById('view');
       view.innerHTML = `
         <section class="page">
           <div class="page-head">
-            <h1 class="page-title">🏆 高分口碑榜</h1>
-            <div class="page-sub">按系统综合评分排序 · 前 30 名</div>
+            <h1 class="page-title">🎬 全部影片</h1>
+            <div class="page-sub">浏览数据库中全部影片,可按评分/热度/上映时间排序</div>
+            <div class="sort-tabs" id="topSortTabs">
+              <button type="button" class="sort-tab ${this.state.search.sort === 'rating' ? 'active' : ''}" data-sort="rating">评分最高</button>
+              <button type="button" class="sort-tab ${this.state.search.sort === 'popularity' ? 'active' : ''}" data-sort="popularity">热度最高</button>
+              <button type="button" class="sort-tab ${this.state.search.sort === 'release_time' ? 'active' : ''}" data-sort="release_time">最新上映</button>
+            </div>
           </div>
           <div id="topGrid" class="movie-grid">${UI.skeletonCards(12)}</div>
+          <div id="topPager" class="pager"></div>
         </section>`;
+      document.getElementById('topSortTabs').querySelectorAll('.sort-tab').forEach(t => t.addEventListener('click', () => {
+        this.state.search.sort = t.dataset.sort;
+        this.state.topPage = 1;
+        this.loadTop();
+      }));
+
       const grid = document.getElementById('topGrid');
+      const page = this.state.topPage || 1;
       try {
-        const res = await Api.movies({ sort_by: 'rating', order: 'desc', page: 1, page_size: 30 });
+        const res = await Api.movies({
+          sort_by: this.state.search.sort, order: 'desc',
+          page, page_size: 24
+        });
         const items = res.data.items || [];
-        grid.innerHTML = items.map((m, i) => this.movieCard(m, { rank: i + 1 })).join('');
+        const total = res.data.total || 0;
+        grid.innerHTML = items.length ? items.map(m => this.movieCard(m, {})).join('')
+          : '<div class="state-box"><div class="state-ico">🎬</div><div class="state-title">暂无影片</div></div>';
         this.bindCardActions(grid);
+        this.renderPager('topPager', total, 24, page, p => {
+          this.state.topPage = p;
+          this.loadTop();
+          UI.scrollTop('smooth');
+        });
       } catch (e) {
         grid.innerHTML = `<div class="state-box"><div class="state-ico">⚠️</div><div class="state-title">加载失败</div><div class="state-sub">${UI.esc(e.detail || '')}</div></div>`;
       }
@@ -2172,23 +2248,53 @@
       this.openGeneric(`
         <h3 class="g-title">👤 我的资料</h3>
         <form id="profileForm" class="g-form">
+          <div class="pf-avatar-row">
+            <div class="pf-avatar-preview" id="pfAvatarPreview">${user.avatar ? `<img src="${UI.esc(user.avatar)}" onerror="UI.posterOnError(this,'头像')">` : '<span>暂无头像</span>'}</div>
+            <div class="pf-avatar-ctl">
+              <label class="btn-ghost sm pf-file-btn">
+                选择图片上传
+                <input type="file" id="pfAvatarFile" accept="image/*" hidden>
+              </label>
+              <div class="pf-avatar-tip">支持 jpg/png/gif/webp 等,最大 5MB;上传后自动保存为头像</div>
+            </div>
+          </div>
           <label class="g-field"><span>昵称</span><input type="text" id="pfUsername" value="${UI.esc(user.username)}"></label>
           <label class="g-field"><span>邮箱</span><input type="email" id="pfEmail" value="${UI.esc(user.email || '')}"></label>
           <label class="g-field"><span>手机号</span><input type="tel" id="pfPhone" value="${UI.esc(user.phone || '')}"></label>
-          <label class="g-field"><span>头像 URL</span><input type="text" id="pfAvatar" value="${UI.esc(user.avatar || '')}" placeholder="可留空，留空则使用昵称首字头像"></label>
           <div class="g-actions">
             <button type="button" class="btn-ghost" id="pfCancel">取消</button>
             <button type="submit" class="btn-primary">保存修改</button>
           </div>
         </form>`);
+      let avatarFile = null;
+      const fileInput = document.getElementById('pfAvatarFile');
+      fileInput.addEventListener('change', async () => {
+        const file = fileInput.files && fileInput.files[0];
+        if (!file) return;
+        const btn = document.querySelector('.pf-file-btn');
+        try {
+          const res = await Api.uploadAvatar(file);
+          const url = (res && res.data && res.data.avatar) || null;
+          if (url) {
+            avatarFile = null; // 已通过上传接口保存
+            const u = Object.assign({}, Net.currentUser(), { avatar: url });
+            Net.setCurrentUser(u);
+            this.renderTopbar();
+            const preview = document.getElementById('pfAvatarPreview');
+            preview.innerHTML = `<img src="${UI.esc(url)}" onerror="UI.posterOnError(this,'头像')">`;
+            UI.toast('头像上传成功', 'ok');
+          }
+        } catch (err) {
+          UI.toast(err.detail || '头像上传失败', 'warn');
+        }
+      });
       document.getElementById('pfCancel').addEventListener('click', () => this.closeGeneric());
       document.getElementById('profileForm').addEventListener('submit', async e => {
         e.preventDefault();
         const payload = {
           username: document.getElementById('pfUsername').value.trim(),
           email: document.getElementById('pfEmail').value.trim(),
-          phone: document.getElementById('pfPhone').value.trim(),
-          avatar: document.getElementById('pfAvatar').value.trim() || null
+          phone: document.getElementById('pfPhone').value.trim()
         };
         try {
           await Api.updateMe(payload);

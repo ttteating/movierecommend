@@ -745,29 +745,39 @@ img { display: block; }
 .si-star.on { color: var(--star); filter: drop-shadow(0 2px 6px rgba(245, 181, 10, 0.5)); }
 .stars-input.big .si-star svg { width: 34px; height: 34px; }
 
-/* 快速连评 */
+/* 快速连评（宽松网格布局） */
 .quick-strip-wrap { margin-top: 26px; }
-.quick-track { align-items: flex-start; }
-.quick-card {
-  width: 128px; flex: none; text-align: center;
-  background: var(--card); border: 1px solid var(--line);
-  border-radius: var(--radius-lg); padding: 10px 8px 12px;
-  transition: border-color 0.2s;
+.quick-track {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 20px;
+  overflow: visible;
+  padding: 6px 2px 16px;
 }
-.quick-card:hover { border-color: var(--line2); }
+.quick-card {
+  width: auto; text-align: center;
+  background: var(--card); border: 1px solid var(--line);
+  border-radius: var(--radius-lg); padding: 20px 14px 22px;
+  transition: border-color 0.2s, transform 0.2s;
+}
+.quick-card:hover { border-color: var(--line2); transform: translateY(-3px); }
 .quick-poster {
-  width: 84px; margin: 0 auto; border-radius: 6px; overflow: hidden;
+  width: 116px; margin: 0 auto; border-radius: 8px; overflow: hidden;
   aspect-ratio: 2/3; object-fit: cover; cursor: pointer;
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.45);
 }
 .quick-name {
-  font-size: 12px; font-weight: 600; margin-top: 8px;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  font-size: 13px; font-weight: 600; margin-top: 12px; line-height: 1.45;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  overflow: hidden; min-height: 38px;
 }
 .quick-stars { display: flex; justify-content: center; gap: 1px; margin-top: 6px; }
 .qs-star { font-size: 16px; color: var(--star-dim); padding: 2px; transition: all 0.12s; line-height: 1; }
 .qs-star:hover { transform: scale(1.2); }
 .qs-star.on { color: var(--star); text-shadow: 0 0 10px rgba(245, 181, 10, 0.7); }
+@media (max-width: 1280px) { .quick-track { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+@media (max-width: 900px) { .quick-track { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 640px) { .quick-track { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 
 /* 剧情简介 */
 .detail-section { margin-top: 30px; }
@@ -1062,6 +1072,28 @@ img { display: block; }
 .g-field input:focus { border-color: var(--accent); }
 .g-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 8px; }
 
+/* 我的资料 · 头像上传 */
+.pf-avatar-row {
+  display: flex; align-items: center; gap: 16px;
+  background: var(--bg2); border: 1px dashed var(--line2);
+  border-radius: var(--radius-lg); padding: 14px 16px; margin-bottom: 14px;
+}
+.pf-avatar-preview {
+  width: 64px; height: 64px; border-radius: 50%; overflow: hidden; flex: none;
+  background: linear-gradient(135deg, #ff8a5c, #d93a1e);
+  display: flex; align-items: center; justify-content: center;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  font-size: 12px; color: rgba(255, 255, 255, 0.85);
+}
+.pf-avatar-preview img { width: 100%; height: 100%; object-fit: cover; }
+.pf-avatar-ctl { display: flex; flex-direction: column; gap: 6px; }
+.pf-file-btn { cursor: pointer; }
+.pf-avatar-tip { font-size: 11.5px; color: var(--text3); }
+
+/* 影评卡片可点击 */
+.review-card.clickable { cursor: pointer; }
+.review-card.clickable:hover { border-color: rgba(255, 92, 56, 0.4); }
+
 /* 抽屉 */
 .drawer-layer {
   position: fixed; inset: 0; z-index: 90; background: rgba(6, 7, 10, 0.55);
@@ -1234,15 +1266,15 @@ img { display: block; }
 .score-chip.active i { color: rgba(255, 255, 255, 0.85); }
 
 /* 快速连评：数字档位 */
-.quick-score-pills { display: flex; justify-content: center; gap: 4px; margin-top: 8px; }
+.quick-score-pills { display: flex; justify-content: center; gap: 6px; margin-top: 12px; }
 .qsp {
-  font-size: 11px; padding: 4px 7px; border-radius: 6px;
+  font-size: 11.5px; padding: 5px 9px; border-radius: 8px;
   background: rgba(255, 255, 255, 0.05); border: 1px solid var(--line);
   color: var(--text2); transition: all 0.12s;
 }
 .qsp:hover { border-color: var(--gold); color: var(--gold); }
 .qsp.active { background: var(--gold); border-color: transparent; color: #4a3400; font-weight: 700; }
-.quick-score-word { font-size: 11px; color: var(--star); text-align: center; min-height: 15px; margin-top: 4px; }
+.quick-score-word { font-size: 11.5px; color: var(--star); text-align: center; min-height: 16px; margin-top: 6px; }
 
 /* 打分页：档位按钮 */
 .rate-card-chips { display: flex; justify-content: center; gap: 5px; margin-top: 10px; flex-wrap: wrap; }

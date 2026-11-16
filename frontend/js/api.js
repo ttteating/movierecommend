@@ -231,6 +231,34 @@
       return this.call(() => Net.post('/api/auth/forgot-password/confirm', { email, code, new_password: newPassword }),
         () => window.MockSvc.forgotPasswordConfirm(email, code, newPassword));
     },
+    /* 上传头像图片（multipart 字段 avatar），返回 {code, msg, data:{avatar}} */
+    uploadAvatar: function (file) {
+      return this.call(async () => {
+        const fd = new FormData();
+        fd.append('avatar', file, file.name || 'avatar');
+        const headers = {};
+        if (Net.token()) headers['Authorization'] = 'Bearer ' + Net.token();
+        let res;
+        try {
+          res = await fetch(Net.baseUrl() + '/api/auth/avatar', { method: 'POST', headers, body: fd });
+        } catch (e) {
+          const err = new Error('无法连接后端服务');
+          err.network = true;
+          throw err;
+        }
+        let data = null;
+        try { data = await res.json(); } catch (e) { data = null; }
+        if (!res.ok) {
+          const err = new Error('HTTP ' + res.status);
+          err.status = res.status;
+          err.data = data;
+          err.detail = extractDetail(data, res.status);
+          if (res.status === 401 && Net.isLoggedIn()) err.sessionExpired = true;
+          throw err;
+        }
+        return data;
+      }, () => window.MockSvc.uploadAvatar(file));
+    },
 
     /* ---------- 电影与分类 ---------- */
     randomMovies: function () {
