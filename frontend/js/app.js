@@ -77,20 +77,23 @@
     },
 
     updateEngineBadge() {
+      /* 侧边栏底部状态块已按组长要求删除,仅更新页脚模式标识 */
       const el = document.getElementById('apiStatus');
       const modeEl = document.getElementById('footerMode');
       const apiEl = document.getElementById('footerApi');
       if (Net.mode === 'real') {
-        el.textContent = '在线模式 · 已连接 API';
+        if (el) el.textContent = '在线模式 · 已连接 API';
         if (modeEl) { modeEl.textContent = '在线模式'; modeEl.className = 'mode-chip online'; }
         if (apiEl) apiEl.textContent = CFG.API_BASE_URL;
-        Api.health().then(r => {
-          const msg = (r && r.data && r.data.message) || (r && r.message) || '后端服务正常';
-          el.textContent = msg;
-        })
-          .catch(() => { el.textContent = 'API 已连接（健康检查失败）'; });
+        if (el) {
+          Api.health().then(r => {
+            const msg = (r && r.data && r.data.message) || (r && r.message) || '后端服务正常';
+            el.textContent = msg;
+          })
+            .catch(() => { el.textContent = 'API 已连接（健康检查失败）'; });
+        }
       } else {
-        el.textContent = '演示模式 · 内置 Mock 数据';
+        if (el) el.textContent = '演示模式 · 内置 Mock 数据';
         if (modeEl) { modeEl.textContent = '演示模式（未连接后端）'; modeEl.className = 'mode-chip demo'; }
         if (apiEl) apiEl.textContent = '接口切换：见 js/config.js → DATA_MODE';
       }
