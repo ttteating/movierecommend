@@ -836,7 +836,6 @@
       const rating = Number(movie.averating);
       const myRatings = await this.getMyRatingsMap();
       const myScore = myRatings[Number(movie.movieid)] || 0;
-      const dist = window.MockSvc.ratingDistribution(movie);
       const better = Math.min(97, Math.round(45 + (isNaN(rating) ? 3.5 : rating) * 10));
 
       view.innerHTML = `
@@ -844,7 +843,6 @@
           <div class="detail-top">
             <div class="honor-badges">
               <span class="honor-badge gold">✦ 入选高分电影榜单</span>
-              <span class="honor-badge">Spark ALS 协同过滤候选影片</span>
             </div>
             <div class="detail-title-row">
               <h1 class="detail-title">${UI.esc(zh)}${en ? ' <span class="detail-title-en">' + UI.esc(en) + '</span>' : ''}${year ? ' <span class="detail-year">(' + year + ')</span>' : ''}</h1>
@@ -881,14 +879,6 @@
                     <div class="rb-stars">${UI.starsHtml(rating, { size: 22 })}</div>
                     <div class="rb-count">${UI.fmtNum(movie.numrating)} 人评价</div>
                   </div>
-                </div>
-                <div class="rb-dist">
-                  ${dist.map(d => `
-                    <div class="dist-row">
-                      <span class="dist-label">${d.star}星</span>
-                      <span class="dist-bar"><i style="width:${d.pct}%"></i></span>
-                      <span class="dist-pct">${d.pct.toFixed(1)}%</span>
-                    </div>`).join('')}
                 </div>
                 <div class="rb-compare">好于 <b>${better}%</b> 同类型片</div>
               </div>
