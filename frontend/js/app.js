@@ -77,20 +77,23 @@
     },
 
     updateEngineBadge() {
+      /* 侧边栏底部状态块已按组长要求删除,仅更新页脚模式标识 */
       const el = document.getElementById('apiStatus');
       const modeEl = document.getElementById('footerMode');
       const apiEl = document.getElementById('footerApi');
       if (Net.mode === 'real') {
-        el.textContent = '在线模式 · 已连接 API';
+        if (el) el.textContent = '在线模式 · 已连接 API';
         if (modeEl) { modeEl.textContent = '在线模式'; modeEl.className = 'mode-chip online'; }
         if (apiEl) apiEl.textContent = CFG.API_BASE_URL;
-        Api.health().then(r => {
-          const msg = (r && r.data && r.data.message) || (r && r.message) || '后端服务正常';
-          el.textContent = msg;
-        })
-          .catch(() => { el.textContent = 'API 已连接（健康检查失败）'; });
+        if (el) {
+          Api.health().then(r => {
+            const msg = (r && r.data && r.data.message) || (r && r.message) || '后端服务正常';
+            el.textContent = msg;
+          })
+            .catch(() => { el.textContent = 'API 已连接（健康检查失败）'; });
+        }
       } else {
-        el.textContent = '演示模式 · 内置 Mock 数据';
+        if (el) el.textContent = '演示模式 · 内置 Mock 数据';
         if (modeEl) { modeEl.textContent = '演示模式（未连接后端）'; modeEl.className = 'mode-chip demo'; }
         if (apiEl) apiEl.textContent = '接口切换：见 js/config.js → DATA_MODE';
       }
@@ -836,7 +839,6 @@
       const rating = Number(movie.averating);
       const myRatings = await this.getMyRatingsMap();
       const myScore = myRatings[Number(movie.movieid)] || 0;
-      const dist = window.MockSvc.ratingDistribution(movie);
       const better = Math.min(97, Math.round(45 + (isNaN(rating) ? 3.5 : rating) * 10));
 
       view.innerHTML = `
@@ -844,7 +846,6 @@
           <div class="detail-top">
             <div class="honor-badges">
               <span class="honor-badge gold">✦ 入选高分电影榜单</span>
-              <span class="honor-badge">Spark ALS 协同过滤候选影片</span>
             </div>
             <div class="detail-title-row">
               <h1 class="detail-title">${UI.esc(zh)}${en ? ' <span class="detail-title-en">' + UI.esc(en) + '</span>' : ''}${year ? ' <span class="detail-year">(' + year + ')</span>' : ''}</h1>
@@ -881,14 +882,6 @@
                     <div class="rb-stars">${UI.starsHtml(rating, { size: 22 })}</div>
                     <div class="rb-count">${UI.fmtNum(movie.numrating)} 人评价</div>
                   </div>
-                </div>
-                <div class="rb-dist">
-                  ${dist.map(d => `
-                    <div class="dist-row">
-                      <span class="dist-label">${d.star}星</span>
-                      <span class="dist-bar"><i style="width:${d.pct}%"></i></span>
-                      <span class="dist-pct">${d.pct.toFixed(1)}%</span>
-                    </div>`).join('')}
                 </div>
                 <div class="rb-compare">好于 <b>${better}%</b> 同类型片</div>
               </div>
