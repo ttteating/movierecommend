@@ -30,6 +30,51 @@
       if (t) localStorage.setItem('mrz_refresh_token', t);
       else localStorage.removeItem('mrz_refresh_token');
     },
+    /* ---------- 管理员会话（独立于普通用户） ---------- */
+    adminToken() { return localStorage.getItem('mrz_admin_token') || null; },
+    setAdminToken(t) {
+      if (t) localStorage.setItem('mrz_admin_token', t);
+      else localStorage.removeItem('mrz_admin_token');
+    },
+    adminUser() {
+      try { return JSON.parse(localStorage.getItem('mrz_admin_user') || 'null'); } catch (e) { return null; }
+    },
+    setAdminUser(u) { localStorage.setItem('mrz_admin_user', JSON.stringify(u || null)); },
+    clearAdminSession() {
+      this.setAdminToken(null);
+      this.setAdminUser(null);
+    },
+    isAdmin() { return !!this.adminToken(); },
+    /* 管理员请求基元：使用管理员 Bearer token，失败抛错 */
+    async adminRaw(path, opts) {
+      opts = opts || {};
+      const headers = Object.assign({}, opts.headers || {});
+      if (opts.body && typeof opts.body !== 'string') {
+        headers['Content-Type'] = 'application/json';
+        opts.body = JSON.stringify(opts.body);
+      }
+      if (this.adminToken()) headers['Authorization'] = 'Bearer ' + this.adminToken();
+      const url = this.baseUrl() + path;
+      let res;
+      try {
+        res = await fetch(url, { method: opts.method || 'GET', headers, body: opts.body });
+      } catch (e) {
+        const err = new Error('无法连接后端服务');
+        err.network = true;
+        throw err;
+      }
+      let data = null;
+      try { data = await res.json(); } catch (e) { data = null; }
+      if (!res.ok) {
+        const err = new Error('HTTP ' + res.status);
+        err.status = res.status;
+        err.data = data;
+        err.detail = extractDetail(data, res.status);
+        if (res.status === 401 && this.adminToken()) err.adminSessionExpired = true;
+        throw err;
+      }
+      return data;
+    },
     currentUserId() {
       try { return Number(localStorage.getItem('mrz_userid') || 0); } catch (e) { return 0; }
     },
@@ -364,9 +409,82 @@
     favoriteStatus: function (movieid) {
       if (Net.mode === 'mock') return window.MockSvc.myFavoriteStatus(movieid);
       return null;
+    },
+
+    /* ---------- 用户反馈 ---------- */
+    createFeedback: function (moviename, note) {
+      return this.call(() => Net.post('/api/feedback', { moviename, note }), () => window.MockSvc.createFeedback(moviename, note));
+    },
+    myFeedback: function (params) {
+      const qs = new URLSearchParams();
+      if (params && params.page) qs.set('page', params.page);
+      if (params && params.page_size) qs.set('page_size', params.page_size);
+      return this.call(() => Net.get('/api/feedback/me?' + qs.toString()), () => window.MockSvc.myFeedback(params || {}));
+    },
+    myComments: function (params) {
+      const qs = new URLSearchParams();
+      if (params && params.page) qs.set('page', params.page);
+      if (params && params.page_size) qs.set('page_size', params.page_size);
+      return this.call(() => Net.get('/api/comments/me?' + qs.toString()), () => window.MockSvc.myComments(params || {}));
+    }
+  };
+
+  /* ---------- 管理员接口（独立会话，对接 /api/admin/*） ---------- */
+  const ApiAdmin = {
+    /* 首次初始化管理员：POST /api/admin/register + X-Admin-Bootstrap-Token */
+    bootstrapRegister: function (bootstrapToken, payload) {
+      if (Net.mode === 'mock') return window.MockSvc.adminBootstrapRegister(payload);
+      return Net.adminRaw('/api/admin/register', {
+        method: 'POST',
+        body: payload,
+        headers: { 'X-Admin-Bootstrap-Token': bootstrapToken }
+      });
+    },
+    login: function (username, password) {
+      if (Net.mode === 'mock') return window.MockSvc.adminLogin(username, password);
+      return Net.adminRaw('/api/admin/login', { method: 'POST', body: { username, password } });
+    },
+    me: function () {
+      if (Net.mode === 'mock') return window.MockSvc.adminMe();
+      return Net.adminRaw('/api/admin/me');
+    },
+    logout: function () {
+      if (Net.mode === 'mock') return window.MockSvc.adminLogout();
+      return Net.adminRaw('/api/admin/logout', { method: 'POST', body: {} });
+    },
+    /* 电影管理（复用 /api/movies 管理写接口，管理员 Bearer） */
+    createMovie: function (payload) {
+      if (Net.mode === 'mock') return window.MockSvc.adminCreateMovie(payload);
+      return Net.adminRaw('/api/movies', { method: 'POST', body: payload });
+    },
+    updateMovie: function (movieid, payload) {
+      if (Net.mode === 'mock') return window.MockSvc.adminUpdateMovie(movieid, payload);
+      return Net.adminRaw('/api/movies/' + encodeURIComponent(movieid), { method: 'PUT', body: payload });
+    },
+    deleteMovie: function (movieid) {
+      if (Net.mode === 'mock') return window.MockSvc.adminDeleteMovie(movieid);
+      return Net.adminRaw('/api/movies/' + encodeURIComponent(movieid), { method: 'DELETE' });
+    },
+    createCategory: function (name) {
+      if (Net.mode === 'mock') return window.MockSvc.adminCreateCategory(name);
+      return Net.adminRaw('/api/movies/categories', { method: 'POST', body: { name } });
+    },
+    /* 反馈处理 */
+    feedbackList: function (params) {
+      const qs = new URLSearchParams();
+      if (params && params.status) qs.set('status', params.status);
+      if (params && params.page) qs.set('page', params.page);
+      if (params && params.page_size) qs.set('page_size', params.page_size);
+      if (Net.mode === 'mock') return window.MockSvc.adminFeedbackList(params || {});
+      return Net.adminRaw('/api/feedback/admin/list?' + qs.toString());
+    },
+    feedbackResolve: function (feedbackid, status) {
+      if (Net.mode === 'mock') return window.MockSvc.adminFeedbackResolve(feedbackid, status);
+      return Net.adminRaw('/api/feedback/admin/' + encodeURIComponent(feedbackid), { method: 'PUT', body: { status } });
     }
   };
 
   window.Net = Net;
   window.Api = Api;
+  window.ApiAdmin = ApiAdmin;
 })();

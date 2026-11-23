@@ -179,6 +179,27 @@ const assert = (cond, msg) => {
   const detail = await Api.movieDetail(318);
   assert(Array.isArray(detail.data.categories) && detail.data.categories.length > 0, '电影详情含分类关联');
 
+  // 我的评论
+  const myc = await Api.myComments({ page: 1, page_size: 10 });
+  assert(myc.code === 200 && Array.isArray(myc.data.items), '我的评论列表');
+
+  // 用户反馈 → 管理员处理
+  const fb = await Api.createFeedback('流浪地球', '2019 年上映,导演郭帆');
+  assert(fb.code === 201 && fb.data.feedbackid > 0, '提交电影缺失反馈 201');
+  const myFb = await Api.myFeedback({ page: 1, page_size: 10 });
+  assert(myFb.data.total >= 1 && myFb.data.items[0].moviename === '流浪地球', '我的反馈列表');
+  const ApiAdmin = sandbox.ApiAdmin;
+  const admInit = await ApiAdmin.bootstrapRegister('test-bootstrap', { username: 'mockadmin', password: 'Admin1234', role: 'admin' });
+  assert(admInit.code === 201, '管理员初始化 201');
+  const admLogin = await ApiAdmin.login('mockadmin', 'Admin1234');
+  assert(!!admLogin.data.access_token && admLogin.data.role === 'admin', '管理员登录返回 token+role');
+  const admFb = await ApiAdmin.feedbackList({ status: 'pending', page: 1, page_size: 20 });
+  assert(admFb.data.total >= 1 && admFb.data.items[0].status === 'pending', '管理员反馈列表');
+  const resolved = await ApiAdmin.feedbackResolve(fb.data.feedbackid, 'resolved');
+  assert(resolved.data.status === 'resolved', '管理员处理反馈');
+  const created = await ApiAdmin.createMovie({ movieid: 999999, moviename: 'Test Admin Movie (2026)', category_ids: [] });
+  assert(created.code === 201 && created.data.movieid === 999999, '管理员上传电影 201');
+
   // 退出登录
   const lg = await Api.logout();
   assert(lg.code === 200, '退出登录');

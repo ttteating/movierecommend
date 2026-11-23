@@ -708,6 +708,162 @@
       return ALL_MOVIES.slice().sort((a, b) => (b.averating || 0) - (a.averating || 0)).slice(0, n || 10).map(listItem);
     },
 
+    /* ---------- 用户反馈（演示） ---------- */
+    createFeedback: async function (moviename, note) {
+      await delay();
+      if (!String(moviename || '').trim()) throw { status: 422, detail: '请填写电影名或关键词' };
+      const all = LS.get('feedback', []);
+      const fb = {
+        feedbackid: all.length ? Math.max(...all.map(x => x.feedbackid)) + 1 : 1,
+        userid: window.Net.currentUserId(),
+        moviename: String(moviename).trim(),
+        note: note ? String(note).trim() : null,
+        status: 'pending',
+        created_at: new Date().toISOString(),
+        resolved_at: null
+      };
+      all.push(fb);
+      LS.set('feedback', all);
+      return { code: 201, msg: '反馈已提交，管理员核实后将尽快补录影片', data: { feedbackid: fb.feedbackid, status: fb.status } };
+    },
+    myFeedback: async function (params) {
+      await delay();
+      const page = Math.max(1, Number((params && params.page) || 1));
+      const pageSize = Math.min(100, Math.max(1, Number((params && params.page_size) || 20)));
+      const mine = LS.get('feedback', []).filter(f => f.userid === window.Net.currentUserId())
+        .sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));
+      const items = mine.map(f => ({
+        feedbackid: f.feedbackid, userid: f.userid,
+        username: (users.find(u => u.userid === f.userid) || {}).username,
+        moviename: f.moviename, note: f.note, status: f.status,
+        created_at: f.created_at, resolved_at: f.resolved_at
+      }));
+      const total = items.length;
+      return { code: 200, data: { items: items.slice((page - 1) * pageSize, page * pageSize), total, page, page_size: pageSize } };
+    },
+
+    /* ---------- 我的评论（演示） ---------- */
+    myComments: async function (params) {
+      await delay();
+      const page = Math.max(1, Number((params && params.page) || 1));
+      const pageSize = Math.min(100, Math.max(1, Number((params && params.page_size) || 20)));
+      const me = window.Net.currentUserId();
+      const mine = this._seedComments().filter(c => !c.deleted && c.userid === me)
+        .sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));
+      const items = mine.map(c => {
+        const m = ALL_MOVIES.find(x => x.movieid === c.movieid);
+        return {
+          commentid: c.commentid, movieid: c.movieid,
+          moviename: m ? m.moviename : null, name_zh: m ? m.name_zh : null,
+          picture: m ? m.picture : null, content: c.content,
+          moderation_status: c.moderation_status, created_at: c.created_at
+        };
+      });
+      const total = items.length;
+      return { code: 200, data: { items: items.slice((page - 1) * pageSize, page * pageSize), total, page, page_size: pageSize } };
+    },
+
+    /* ---------- 管理员（演示） ---------- */
+    adminBootstrapRegister: async function (payload) {
+      await delay();
+      const admins = LS.get('admins', null) || [];
+      if (admins.find(a => a.username === payload.username)) throw { status: 409, detail: '管理员账号已存在' };
+      const na = { adminid: admins.length ? Math.max(...admins.map(a => a.adminid)) + 1 : 1, username: payload.username, password: payload.password, role: payload.role || 'admin', status: 'active' };
+      admins.push(na);
+      LS.set('admins', admins);
+      return { code: 201, msg: '管理员创建成功', data: { adminid: na.adminid, username: na.username, role: na.role, status: na.status } };
+    },
+    adminLogin: async function (username, password) {
+      await delay();
+      const admins = LS.get('admins', null) || [];
+      const a = admins.find(x => x.username === username && x.password === password && x.status === 'active');
+      if (!a) throw { status: 401, detail: '管理员账号或密码错误' };
+      return {
+        code: 200,
+        data: {
+          access_token: 'mock.admin.' + btoa(JSON.stringify({ admin_sub: a.adminid })),
+          refresh_token: 'mock.admin.refresh.' + uid(),
+          token_type: 'bearer', expires_in: 900, refresh_expires_in: 604800, role: a.role
+        }
+      };
+    },
+    adminMe: async function () {
+      await delay();
+      const u = window.Net.adminUser();
+      if (!u) throw { status: 401, detail: '管理员登录已失效' };
+      return { code: 200, data: { adminid: u.adminid, username: u.username, role: u.role } };
+    },
+    adminLogout: async function () {
+      await delay();
+      return { code: 200, msg: '已退出' };
+    },
+    adminCreateMovie: async function (payload) {
+      await delay();
+      if (!Number.isInteger(payload.movieid) || payload.movieid <= 0) throw { status: 422, detail: 'movieid 必须为正整数' };
+      if (!String(payload.moviename || '').trim()) throw { status: 422, detail: '电影名不能为空' };
+      if (ALL_MOVIES.find(x => x.movieid === payload.movieid)) throw { status: 409, detail: '电影 ID 已存在' };
+      const m = {
+        movieid: payload.movieid,
+        moviename: payload.moviename,
+        releasetime: payload.releasetime || null,
+        director: payload.director || null,
+        leadactors: payload.leadactors || null,
+        picture: payload.picture || null,
+        averating: payload.averating != null ? payload.averating : null,
+        numrating: 0,
+        description: payload.description || null,
+        typelist: payload.typelist || null,
+        name_zh: null, tagline: null
+      };
+      ALL_MOVIES.push(m);
+      LS.set('extra_movies', LS.get('extra_movies', []).concat([m]));
+      return { code: 201, data: { movieid: m.movieid } };
+    },
+    adminUpdateMovie: async function (movieid, payload) {
+      await delay();
+      const m = ALL_MOVIES.find(x => x.movieid === Number(movieid));
+      if (!m) throw { status: 404, detail: '电影不存在或已删除' };
+      Object.assign(m, payload);
+      return { code: 200, msg: '电影更新成功' };
+    },
+    adminDeleteMovie: async function (movieid) {
+      await delay();
+      const idx = ALL_MOVIES.findIndex(x => x.movieid === Number(movieid));
+      if (idx < 0) throw { status: 404, detail: '电影不存在或已删除' };
+      ALL_MOVIES.splice(idx, 1);
+      return { code: 200, msg: '电影已软删除' };
+    },
+    adminCreateCategory: async function (name) {
+      await delay();
+      return { code: 201, data: { categoryid: 900 + Math.floor(Math.random() * 100), name } };
+    },
+    adminFeedbackList: async function (params) {
+      await delay();
+      const page = Math.max(1, Number((params && params.page) || 1));
+      const pageSize = Math.min(100, Math.max(1, Number((params && params.page_size) || 20)));
+      let list = LS.get('feedback', []);
+      if (params && params.status) list = list.filter(f => f.status === params.status);
+      list = list.slice().sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));
+      const items = list.map(f => ({
+        feedbackid: f.feedbackid, userid: f.userid,
+        username: (users.find(u => u.userid === f.userid) || {}).username || '用户' + f.userid,
+        moviename: f.moviename, note: f.note, status: f.status,
+        created_at: f.created_at, resolved_at: f.resolved_at
+      }));
+      const total = items.length;
+      return { code: 200, data: { items: items.slice((page - 1) * pageSize, page * pageSize), total, page, page_size: pageSize } };
+    },
+    adminFeedbackResolve: async function (feedbackid, status) {
+      await delay();
+      const all = LS.get('feedback', []);
+      const fb = all.find(x => x.feedbackid === Number(feedbackid));
+      if (!fb) throw { status: 404, detail: '反馈不存在' };
+      fb.status = status;
+      fb.resolved_at = status === 'resolved' ? new Date().toISOString() : null;
+      LS.set('feedback', all);
+      return { code: 200, msg: '反馈状态已更新', data: { feedbackid: fb.feedbackid, status: fb.status } };
+    },
+
     /* 工具 */
     allMovies: ALL_MOVIES
   };

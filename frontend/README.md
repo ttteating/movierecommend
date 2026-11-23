@@ -20,6 +20,22 @@ Open `http://127.0.0.1:8001`. Set `API_BASE_URL` and `DATA_MODE` in `js/config.j
 - **评论**：详情页热门影评对接 `GET /api/comments/movies/{id}/comments`、`POST /api/comments`、`POST /api/comments/{id}/like`、`DELETE /api/comments/{id}`、`POST /api/comments/{id}/reports`（含举报原因选择）。
 - **推荐**：生成接口返回 202 + `task_id`，前端在 Spark 三步动效中轮询 `GET /api/recommend/task/{task_id}` 直到 SUCCESS/FAILURE，再读取 `GET /api/recommend/result`；列表项展示 `recommendation_source`（ALS 个性化/热门补位/历史推荐）与 0-1 `prediction_score`（本列表排序分，不是概率或电影评分）；曝光/点击/不感兴趣通过 `POST /api/recommend/event` 上报。
 - **相似电影**：详情页“喜欢这部电影的人也喜欢”对接 `GET /api/recommend/similar/{movieid}`。
+- **管理员**：管理后台页（页脚「🛠 管理后台」入口）对接 `POST /api/admin/login`、`GET /api/admin/me`、`POST /api/admin/logout`、`POST /api/admin/register`（`X-Admin-Bootstrap-Token` 首次初始化），电影管理写接口 `POST/PUT/DELETE /api/movies` 与分类接口。
+- **反馈**：搜索无结果时可向管理员反馈缺失影片 —— `POST /api/feedback`（用户）、`GET /api/feedback/me`（用户）、`GET /api/feedback/admin/list`（管理员）、`PUT /api/feedback/admin/{id}`（管理员处理）。数据库表 `moviefeedback` 由 `backend/migrations/0006_moviefeedback.sql` 创建。
+
+## Pages
+
+- 首页精选 / 全部影片（排序+分页）/ 搜索（中文名自动翻译英文片名）
+- 个性打分（1-5 星一键档位）、猜你喜欢（任务轮询 + 结果缓存）
+- 电影详情（评分/收藏/评论/快速连评/相似影片）
+- 热门影评：**电影下拉切换**，可查看任意电影评论区（分页、点赞/删除/举报），一键跳转详情页
+- 我的评分 / 我的收藏 / **我的评论**（分页查看、删除自己的评论）
+
+## Admin Setup
+
+1. 后端 `.env` 配置 `ADMIN_BOOTSTRAP_TOKEN`。
+2. 前端页脚点「管理后台」→ 首次使用表单粘贴 Bootstrap Token 并创建管理员账号。
+3. 用该账号登录后台，即可上传电影（含分类多选）并处理用户反馈。
 
 ## UI Notes
 
@@ -40,4 +56,4 @@ Run the frontend mock smoke test from the repository root:
 node frontend/tests/smoke_test.js
 ```
 
-The smoke test covers mock authentication (including refresh/forgot-password), 1-5 ratings, favorites, comments (post/like/report/delete), categories, recommendation task/result shape and 0-1 scores, and movie APIs. It does not connect to MySQL, Redis, Celery, or Spark.
+The smoke test covers mock authentication (including refresh/forgot-password), 1-5 ratings, favorites, comments (post/like/report/delete), categories, recommendation task/result shape and 0-1 scores, feedback, my comments, admin bootstrap/login/movie-create and feedback handling, and movie APIs. It does not connect to MySQL, Redis, Celery, or Spark.
