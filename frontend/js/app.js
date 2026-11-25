@@ -218,6 +218,8 @@
       else if (segs[0] === 'reviews') render('reviews', () => this.loadReviews());
       else if (segs[0] === 'myratings') render('myratings', () => this.loadMyRatings(), true);
       else if (segs[0] === 'myfavorites') render('myfavorites', () => this.loadMyFavorites(), true);
+      else if (segs[0] === 'mycomments') render('mycomments', () => this.loadMyComments(), true);
+      else if (segs[0] === 'admin') render('admin', () => this.loadAdmin());
       else render('home', () => this.loadHome());
 
       // 关闭浮动层
@@ -225,7 +227,7 @@
     },
 
     setActiveNav(path) {
-      const map = { '': 'home', search: null, movie: null, rate: 'rate', recommend: 'recommend', top: 'top', reviews: 'reviews', myratings: 'myratings', myfavorites: 'myfavorites' };
+      const map = { '': 'home', search: null, movie: null, rate: 'rate', recommend: 'recommend', top: 'top', reviews: 'reviews', myratings: 'myratings', myfavorites: 'myfavorites', mycomments: 'mycomments', admin: null };
       const key = map[path.split('/')[0]];
       document.querySelectorAll('.nav-item').forEach(a => a.classList.toggle('active', a.dataset.route === key));
     },
@@ -769,9 +771,25 @@
         } else {
           const isZh = /[\u4e00-\u9fa5]/.test(q);
           const hint = isZh
-            ? '数据库片名均为英文（如 Shawshank、Avatar、Godfather）。已尝试中文名自动翻译，若仍未找到，请直接输入英文片名，或检查后端是否已启动（左下角应显示“在线模式”）。'
-            : '试试更换关键词，或检查后端是否已启动（左下角应显示“在线模式”）。';
-          grid.innerHTML = `<div class="state-box"><div class="state-ico">🔍</div><div class="state-title">没有找到相关影片</div><div class="state-sub">${UI.esc(hint)}</div></div>`;
+            ? '数据库片名均为英文（如 Shawshank、Avatar、Godfather）。已尝试中文名自动翻译，若仍未找到，请直接输入英文片名，或检查后端是否已启动。'
+            : '试试更换关键词，或检查后端是否已启动。';
+          grid.innerHTML = `
+            <div class="state-box">
+              <div class="state-ico">🔍</div>
+              <div class="state-title">没有找到相关影片</div>
+              <div class="state-sub">${UI.esc(hint)}</div>
+              ${q ? `<button type="button" class="btn-primary" id="feedbackFromSearch">📮 向管理员反馈这部缺失的影片</button>` : ''}
+            </div>`;
+          const fbBtn = document.getElementById('feedbackFromSearch');
+          if (fbBtn) fbBtn.addEventListener('click', () => {
+            if (!this.requireAuth()) return;
+            const form = document.getElementById('fbMoviename');
+            this.openFeedbackForm();
+            setTimeout(() => {
+              const el = document.getElementById('fbMoviename');
+              if (el) el.value = q;
+            }, 50);
+          });
         }
         this.bindCardActions(grid);
         this.renderPager('searchPager', total, 24, this.state.search.page, page => {
@@ -1908,19 +1926,101 @@
         <section class="page">
           <div class="page-head">
             <h1 class="page-title">💬 热门影评</h1>
-            <div class="page-sub">编辑部精选 · 深度影评与口碑社区</div>
+            <div class="page-sub">选择任意电影查看其评论区,也可以点进电影详情页写短评</div>
+          </div>
+          <div class="review-picker">
+            <span class="review-picker-label">选择电影:</span>
+            <select id="reviewMovieSelect" class="movie-select"></select>
+            <button type="button" class="btn-ghost sm" id="reviewGoMovie">查看电影详情 »</button>
           </div>
           <div id="reviewsList"></div>
+          <div id="reviewsPager" class="pager"></div>
         </section>`;
       const list = document.getElementById('reviewsList');
-      list.innerHTML = '<div class="sk-line w80"></div><div class="sk-line w60"></div>'.repeat(3);
+      const select = document.getElementById('reviewMovieSelect');
+
+      /* 下拉电影列表:评分榜前 60 部 + 内置精选影片 */
+      let movies = [];
       try {
-        const reviews = await Api.reviews();
-        list.innerHTML = reviews.map(r => this.reviewCard(r, true)).join('');
-        this.bindReviewActions(list);
+        const res = await Api.movies({ sort_by: 'rating', order: 'desc', page: 1, page_size: 60 });
+        movies = res.data.items || [];
       } catch (e) {
-        list.innerHTML = `<div class="state-box"><div class="state-ico">⚠️</div><div class="state-title">加载失败</div><div class="state-sub">${UI.esc(e.detail || '')}</div></div>`;
+        movies = [];
       }
+      if (Net.mode === 'mock' && window.MOCK_MOVIES && (!movies.length)) {
+        movies = window.MOCK_MOVIES.slice(0, 60).map(m => ({
+          movieid: m.movieid, moviename: m.moviename, name_zh: m.name_zh
+        }));
+      }
+      select.innerHTML = movies.map(m => {
+        const zh = m.name_zh || m.moviename || '';
+        return `<option value="${m.movieid}">${UI.esc(zh)}${m.name_zh && m.moviename ? ' · ' + UI.esc(m.moviename) : ''}</option>`;
+      }).join('') || '<option value="">暂无影片</option>';
+
+      const self = this;
+      const renderComments = async (page) => {
+        const movieid = Number(select.value);
+        if (!movieid) {
+          list.innerHTML = '<div class="rail-empty">暂无影片可选</div>';
+          return;
+        }
+        list.innerHTML = '<div class="sk-line w80"></div><div class="sk-line w60"></div>'.repeat(3);
+        try {
+          const res = await Api.comments(movieid, { page, page_size: 10 });
+          const items = (res.data && res.data.items) || [];
+          const total = (res.data && res.data.total) || 0;
+          const me = Net.currentUser();
+          const myId = me ? Number(me.userid) : 0;
+          list.innerHTML = items.length
+            ? items.map(c => this.commentItemHtml(c, myId)).join('')
+            : '<div class="rail-empty">这部电影还没有评论,点右上角「查看电影详情」去写第一条短评吧</div>';
+          /* 绑定点赞/删除/举报(复用详情页评论逻辑) */
+          list.querySelectorAll('.comment-item').forEach(item => {
+            const id = Number(item.dataset.id);
+            item.querySelector('[data-act="like"]').addEventListener('click', async e => {
+              e.stopPropagation();
+              if (!this.requireAuth()) return;
+              try {
+                const r = await Api.toggleCommentLike(id);
+                UI.toast((r && r.data && r.data.liked) ? '已点赞 👍' : '已取消点赞');
+                renderComments(page);
+              } catch (err) {
+                UI.toast(err.detail || '操作失败', 'warn');
+              }
+            });
+            const delBtn = item.querySelector('[data-act="delete"]');
+            if (delBtn) delBtn.addEventListener('click', async e => {
+              e.stopPropagation();
+              if (!window.confirm('确定删除这条评论吗？')) return;
+              try {
+                await Api.deleteComment(id);
+                UI.toast('评论已删除', 'ok');
+                renderComments(page);
+              } catch (err) {
+                UI.toast(err.detail || '删除失败', 'warn');
+              }
+            });
+            const repBtn = item.querySelector('[data-act="report"]');
+            if (repBtn) repBtn.addEventListener('click', e => {
+              e.stopPropagation();
+              this.openReportModal(id);
+            });
+          });
+          this.renderPager('reviewsPager', total, 10, page, p => {
+            renderComments(p);
+            UI.scrollTop('smooth');
+          });
+        } catch (e) {
+          list.innerHTML = `<div class="state-box"><div class="state-ico">⚠️</div><div class="state-title">评论加载失败</div><div class="state-sub">${UI.esc(e.detail || '')}</div></div>`;
+        }
+      };
+
+      select.addEventListener('change', () => renderComments(1));
+      document.getElementById('reviewGoMovie').addEventListener('click', () => {
+        const id = select.value;
+        if (id) location.hash = '#/movie/' + id;
+      });
+      await renderComments(1);
     },
 
     /* ================= 我的评分 ================= */
@@ -2086,6 +2186,327 @@
         load();
       }));
       await load();
+    },
+
+    /* ================= 我的评论 ================= */
+    async loadMyComments() {
+      const view = document.getElementById('view');
+      view.innerHTML = `
+        <section class="page">
+          <div class="page-head">
+            <h1 class="page-title">💬 我的评论</h1>
+            <div class="page-sub">这里可以看到你发表过的所有短评,可删除自己的评论</div>
+          </div>
+          <div id="myCommentsList"></div>
+          <div id="myCommentsPager" class="pager"></div>
+        </section>`;
+      const list = document.getElementById('myCommentsList');
+      await this.renderMyCommentsPage(1, list);
+    },
+
+    async renderMyCommentsPage(page, list) {
+      list.innerHTML = '<div class="sk-line w80"></div><div class="sk-line w60"></div>'.repeat(3);
+      try {
+        const res = await Api.myComments({ page, page_size: 20 });
+        const items = (res.data && res.data.items) || [];
+        const total = (res.data && res.data.total) || 0;
+        if (!items.length) {
+          list.innerHTML = `
+            <div class="state-box">
+              <div class="state-ico">💬</div>
+              <div class="state-title">还没有发表过评论</div>
+              <div class="state-sub">去电影详情页写一条短评吧</div>
+              <button type="button" class="btn-primary" onclick="location.hash='#/'">去逛逛首页</button>
+            </div>`;
+          return;
+        }
+        list.innerHTML = items.map(c => {
+          const zh = c.name_zh || c.moviename || '';
+          return `
+            <article class="mycomment-row" data-movie="${c.movieid}">
+              ${UI.posterImg(c.picture, zh, 'mycomment-poster')}
+              <div class="mycomment-body">
+                <div class="mycomment-head">
+                  <span class="mycomment-movie">《${UI.esc(zh)}》</span>
+                  <span class="mycomment-time">${UI.esc(UI.fmtTime(c.created_at))}</span>
+                  ${c.moderation_status === 'review_pending' ? '<span class="ci-pending">审核中</span>' : ''}
+                </div>
+                <p class="mycomment-content">${UI.esc(c.content)}</p>
+              </div>
+              <div class="mycomment-actions">
+                <button type="button" class="btn-ghost sm" data-act="movie">查看电影</button>
+                <button type="button" class="btn-ghost sm danger-btn" data-act="delete" data-id="${c.commentid}">删除</button>
+              </div>
+            </article>`;
+        }).join('');
+
+        list.querySelectorAll('.mycomment-row').forEach(row => {
+          row.addEventListener('click', e => {
+            if (e.target.closest('[data-act]')) return;
+            location.hash = '#/movie/' + row.dataset.movie;
+          });
+          const mvBtn = row.querySelector('[data-act="movie"]');
+          if (mvBtn) mvBtn.addEventListener('click', () => { location.hash = '#/movie/' + row.dataset.movie; });
+          const delBtn = row.querySelector('[data-act="delete"]');
+          if (delBtn) delBtn.addEventListener('click', async e => {
+            e.stopPropagation();
+            if (!window.confirm('确定删除这条评论吗？')) return;
+            try {
+              await Api.deleteComment(Number(delBtn.dataset.id));
+              UI.toast('评论已删除', 'ok');
+              this.renderMyCommentsPage(page, list);
+            } catch (err) {
+              UI.toast(err.detail || '删除失败', 'warn');
+            }
+          });
+        });
+
+        this.renderPager('myCommentsPager', total, 20, page, p => {
+          this.renderMyCommentsPage(p, list);
+          UI.scrollTop('smooth');
+        });
+      } catch (e) {
+        list.innerHTML = `<div class="state-box"><div class="state-ico">⚠️</div><div class="state-title">加载失败</div><div class="state-sub">${UI.esc(e.detail || '')}</div></div>`;
+      }
+    },
+
+    /* ================= 用户反馈(搜不到电影) ================= */
+    openFeedbackForm() {
+      this.openGeneric(`
+        <h3 class="g-title">📮 向管理员反馈缺失电影</h3>
+        <form id="feedbackForm" class="g-form">
+          <label class="g-field"><span>电影名称 / 关键词 *</span><input type="text" id="fbMoviename" placeholder="例如:流浪地球" maxlength="500"></label>
+          <label class="g-field"><span>补充说明(年份/导演/主演等,选填)</span><textarea id="fbNote" rows="3" maxlength="1000" placeholder="例如:2019 年上映,导演郭帆,主演吴京"></textarea></label>
+          <div class="g-field"><span style="color:var(--text3);font-size:11.5px">管理员核实后会将影片补录到数据库,处理结果可在「我的反馈」中查看</span></div>
+          <div class="g-actions">
+            <button type="button" class="btn-ghost" id="fbCancel">取消</button>
+            <button type="submit" class="btn-primary">提交反馈</button>
+          </div>
+        </form>`);
+      document.getElementById('fbCancel').addEventListener('click', () => this.closeGeneric());
+      document.getElementById('feedbackForm').addEventListener('submit', async e => {
+        e.preventDefault();
+        const moviename = document.getElementById('fbMoviename').value.trim();
+        const note = document.getElementById('fbNote').value.trim();
+        if (!moviename) { UI.toast('请填写电影名称或关键词', 'warn'); return; }
+        try {
+          await Api.createFeedback(moviename, note || null);
+          this.closeGeneric();
+          UI.toast('反馈已提交,管理员核实后将尽快补录影片', 'ok');
+        } catch (err) {
+          UI.toast(err.detail || '反馈提交失败', 'warn');
+        }
+      });
+    },
+
+    /* ================= 管理员页面 ================= */
+    async loadAdmin() {
+      const view = document.getElementById('view');
+      view.innerHTML = `
+        <section class="page admin-page">
+          <div class="page-head">
+            <h1 class="page-title">🛠 管理后台</h1>
+            <div class="page-sub">管理员登录后可上传电影、处理用户反馈</div>
+          </div>
+          <div id="adminBody"></div>
+        </section>`;
+      const body = document.getElementById('adminBody');
+      await this.renderAdminBody(body);
+    },
+
+    async renderAdminBody(body) {
+      const ApiAdmin = window.ApiAdmin;
+      const admin = Net.adminUser();
+
+      /* 未登录：登录面板 + 首次初始化 */
+      if (!Net.isAdmin() || !admin) {
+        body.innerHTML = `
+          <div class="admin-grid">
+            <div class="admin-card">
+              <h3 class="admin-card-title">管理员登录</h3>
+              <form id="adminLoginForm" class="g-form">
+                <label class="g-field"><span>管理员账号</span><input type="text" id="adUsername" placeholder="例如: admin"></label>
+                <label class="g-field"><span>密码</span><input type="password" id="adPassword" placeholder="请输入管理员密码"></label>
+                <div class="g-actions">
+                  <button type="submit" class="btn-primary">登录后台</button>
+                </div>
+              </form>
+            </div>
+            <div class="admin-card">
+              <h3 class="admin-card-title">首次使用 · 初始化管理员</h3>
+              <form id="adminInitForm" class="g-form">
+                <label class="g-field"><span>Bootstrap Token(见后端 .env 的 ADMIN_BOOTSTRAP_TOKEN)</span><input type="text" id="adBootstrap" placeholder="粘贴初始化令牌"></label>
+                <label class="g-field"><span>新管理员账号</span><input type="text" id="adNewName" placeholder="例如: admin"></label>
+                <label class="g-field"><span>密码(8位以上,含字母和数字)</span><input type="password" id="adNewPwd" placeholder="例如: Admin1234"></label>
+                <label class="g-field"><span>角色</span>
+                  <select id="adNewRole"><option value="admin">普通管理员</option><option value="superadmin" selected>超级管理员</option></select>
+                </label>
+                <div class="g-actions">
+                  <button type="submit" class="btn-primary">初始化管理员</button>
+                </div>
+              </form>
+            </div>
+          </div>`;
+
+        document.getElementById('adminLoginForm').addEventListener('submit', async e => {
+          e.preventDefault();
+          const username = document.getElementById('adUsername').value.trim();
+          const password = document.getElementById('adPassword').value;
+          if (!username || !password) { UI.toast('请输入账号和密码', 'warn'); return; }
+          try {
+            const res = await ApiAdmin.login(username, password);
+            const data = res.data || res;
+            Net.setAdminToken(data.access_token);
+            Net.setAdminUser({ adminid: data.adminid, username, role: data.role });
+            UI.toast('管理员登录成功', 'ok');
+            await this.renderAdminBody(body);
+          } catch (err) {
+            UI.toast(err.detail || '登录失败', 'warn');
+          }
+        });
+
+        document.getElementById('adminInitForm').addEventListener('submit', async e => {
+          e.preventDefault();
+          const bootstrap = document.getElementById('adBootstrap').value.trim();
+          const username = document.getElementById('adNewName').value.trim();
+          const password = document.getElementById('adNewPwd').value;
+          const role = document.getElementById('adNewRole').value;
+          if (!bootstrap) { UI.toast('请粘贴 Bootstrap Token(后端 .env 中的 ADMIN_BOOTSTRAP_TOKEN)', 'warn'); return; }
+          if (!username || !password) { UI.toast('请填写账号和密码', 'warn'); return; }
+          try {
+            const res = await ApiAdmin.bootstrapRegister(bootstrap, { username, password, role });
+            UI.toast('管理员创建成功,请使用新账号登录', 'ok');
+            document.getElementById('adUsername').value = username;
+            document.getElementById('adPassword').value = '';
+            const data = res.data || {};
+            if (data.username) {
+              const loginRes = await ApiAdmin.login(username, password);
+              const d2 = loginRes.data || loginRes;
+              Net.setAdminToken(d2.access_token);
+              Net.setAdminUser({ adminid: d2.adminid, username, role: d2.role });
+              await this.renderAdminBody(body);
+            }
+          } catch (err) {
+            UI.toast(err.detail || '初始化失败(请确认 Token 与后端 .env 一致)', 'warn');
+          }
+        });
+        return;
+      }
+
+      /* 已登录：上传电影 + 反馈处理 */
+      const cats = this.state.categories || [];
+      body.innerHTML = `
+        <div class="admin-topbar">
+          <span class="admin-who">当前管理员:<b>${UI.esc(admin.username)}</b>(${admin.role === 'superadmin' ? '超级管理员' : '管理员'})</span>
+          <button type="button" class="btn-ghost sm" id="adLogout">退出登录</button>
+        </div>
+        <div class="admin-grid">
+          <div class="admin-card">
+            <h3 class="admin-card-title">📤 上传电影</h3>
+            <form id="movieUploadForm" class="g-form">
+              <div class="g-two-col">
+                <label class="g-field"><span>电影 ID *(正整数,数据库主键)</span><input type="number" id="mvId" min="1" placeholder="例如: 185000"></label>
+                <label class="g-field"><span>电影名称 *</span><input type="text" id="mvName" maxlength="1000" placeholder="例如: The Wandering Earth (2019)"></label>
+              </div>
+              <div class="g-two-col">
+                <label class="g-field"><span>上映日期</span><input type="date" id="mvDate"></label>
+                <label class="g-field"><span>导演</span><input type="text" id="mvDirector" maxlength="1000"></label>
+              </div>
+              <label class="g-field"><span>主演(逗号分隔)</span><input type="text" id="mvActors" maxlength="1000"></label>
+              <label class="g-field"><span>海报图片 URL</span><input type="text" id="mvPicture" maxlength="1000" placeholder="http://image.tmdb.org/t/p/w185/xxx.jpg"></label>
+              <label class="g-field"><span>剧情简介</span><textarea id="mvDesc" rows="3" maxlength="1000"></textarea></label>
+              <label class="g-field"><span>类型(逗号分隔,如 Drama,Sci-Fi)</span><input type="text" id="mvTypes" maxlength="255" placeholder="Drama,Science Fiction"></label>
+              <label class="g-field"><span>关联分类(可多选)</span>
+                <div class="cat-check-list" id="mvCats"></div>
+              </label>
+              <div class="g-actions">
+                <button type="submit" class="btn-primary">上传电影</button>
+              </div>
+            </form>
+          </div>
+          <div class="admin-card">
+            <h3 class="admin-card-title">📮 用户反馈 <span class="admin-tab" id="fbTabPending" data-status="pending">待处理</span><span class="admin-tab" data-status="resolved">已处理</span></h3>
+            <div id="fbList"></div>
+          </div>
+        </div>`;
+
+      const catBox = document.getElementById('mvCats');
+      catBox.innerHTML = cats.map(c => `
+        <label class="cat-check"><input type="checkbox" value="${c.categoryid}">${UI.esc(this.catLabel(c))}</label>`).join('');
+
+      document.getElementById('adLogout').addEventListener('click', async () => {
+        try { await ApiAdmin.logout(); } catch (e) { /* noop */ }
+        Net.clearAdminSession();
+        UI.toast('已退出管理后台');
+        await this.renderAdminBody(body);
+      });
+
+      document.getElementById('movieUploadForm').addEventListener('submit', async e => {
+        e.preventDefault();
+        const movieid = Number(document.getElementById('mvId').value);
+        const moviename = document.getElementById('mvName').value.trim();
+        if (!movieid || movieid <= 0) { UI.toast('请填写正整数电影 ID', 'warn'); return; }
+        if (!moviename) { UI.toast('请填写电影名称', 'warn'); return; }
+        const category_ids = Array.from(catBox.querySelectorAll('input:checked')).map(x => Number(x.value));
+        const payload = {
+          movieid,
+          moviename,
+          releasetime: document.getElementById('mvDate').value || null,
+          director: document.getElementById('mvDirector').value.trim() || null,
+          leadactors: document.getElementById('mvActors').value.trim() || null,
+          picture: document.getElementById('mvPicture').value.trim() || null,
+          description: document.getElementById('mvDesc').value.trim() || null,
+          typelist: document.getElementById('mvTypes').value.trim() || null,
+          category_ids
+        };
+        try {
+          await ApiAdmin.createMovie(payload);
+          UI.toast('电影上传成功 🎬', 'ok');
+          document.getElementById('movieUploadForm').reset();
+        } catch (err) {
+          UI.toast(err.detail || '上传失败', 'warn');
+        }
+      });
+
+      /* 反馈列表 */
+      let fbStatus = 'pending';
+      const fbList = document.getElementById('fbList');
+      const loadFb = async () => {
+        fbList.innerHTML = '<div class="sk-line w80"></div><div class="sk-line w60"></div>'.repeat(2);
+        try {
+          const res = await ApiAdmin.feedbackList({ status: fbStatus, page: 1, page_size: 50 });
+          const items = (res.data && res.data.items) || [];
+          fbList.innerHTML = items.length ? items.map(f => `
+            <div class="fb-item">
+              <div class="fb-head">
+                <span class="fb-movie">🎬 ${UI.esc(f.moviename)}</span>
+                <span class="fb-status ${f.status === 'resolved' ? 'resolved' : ''}">${f.status === 'resolved' ? '已处理' : '待处理'}</span>
+              </div>
+              ${f.note ? `<div class="fb-note">${UI.esc(f.note)}</div>` : ''}
+              <div class="fb-meta">来自 <b>${UI.esc(f.username || '用户' + f.userid)}</b> · ${UI.esc(UI.fmtTime(f.created_at))}</div>
+              ${f.status === 'pending' ? `<button type="button" class="btn-primary sm" data-act="resolve" data-id="${f.feedbackid}">标记已处理</button>` : ''}
+            </div>`).join('')
+            : '<div class="rail-empty">暂无反馈</div>';
+          fbList.querySelectorAll('[data-act="resolve"]').forEach(b => b.addEventListener('click', async () => {
+            try {
+              await ApiAdmin.feedbackResolve(Number(b.dataset.id), 'resolved');
+              UI.toast('已标记为处理完成', 'ok');
+              loadFb();
+            } catch (err) {
+              UI.toast(err.detail || '操作失败', 'warn');
+            }
+          }));
+        } catch (err) {
+          fbList.innerHTML = `<div class="rail-empty">${UI.esc(err.detail || '反馈加载失败')}</div>`;
+        }
+      };
+      body.querySelectorAll('.admin-tab').forEach(t => t.addEventListener('click', () => {
+        body.querySelectorAll('.admin-tab').forEach(x => x.classList.toggle('active', x === t));
+        fbStatus = t.dataset.status;
+        loadFb();
+      }));
+      body.querySelector('#fbTabPending').classList.add('active');
+      await loadFb();
     },
 
     /* ================= 登录 / 注册弹窗 ================= */

@@ -301,6 +301,29 @@ class UserFavorite(models.Model):
         )
 
 
+class MovieFeedback(models.Model):
+    """用户反馈:搜不到某部电影时向管理员提交补充信息。"""
+    feedbackid = fields.BigIntField(pk=True)
+    user = fields.ForeignKeyField(
+        "models.User",
+        related_name="feedbacks",
+        source_field="userid",
+        on_delete=fields.RESTRICT,
+    )
+    moviename = fields.CharField(max_length=500)
+    note = fields.CharField(max_length=1000, null=True)
+    status = fields.CharField(max_length=20, default="pending")
+    created_at = fields.DatetimeField(auto_now_add=True)
+    resolved_at = fields.DatetimeField(null=True)
+
+    class Meta:
+        table = "moviefeedback"
+        indexes = (
+            ("status", "created_at"),
+            ("user", "created_at"),
+        )
+
+
 class AdminOperationLog(models.Model):
     logid = fields.BigIntField(pk=True)
     admin = fields.ForeignKeyField(

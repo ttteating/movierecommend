@@ -14,6 +14,7 @@ from app.api import users, movies, ratings, recommend, comments
 from app.api import favorites
 from app.api import admin
 from app.api import analytics
+from app.api import feedback
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -87,6 +88,7 @@ app.include_router(favorites.router, prefix="/api/favorites", tags=["收藏"])
 app.include_router(comments.router, prefix="/api/comments", tags=["评论"])
 app.include_router(admin.router, prefix="/api/admin", tags=["管理员注入"])
 app.include_router(analytics.router, prefix="/api/analytics", tags=["数据分析"])
+app.include_router(feedback.router, prefix="/api/feedback", tags=["反馈"])
 
 @app.get("/")
 async def root():
