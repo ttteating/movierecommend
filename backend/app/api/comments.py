@@ -3,6 +3,7 @@ from typing import Literal, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from tortoise.exceptions import IntegrityError
+from tortoise.expressions import Q
 from tortoise.functions import Count
 from tortoise.transactions import in_transaction
 
@@ -69,6 +70,29 @@ async def list_movie_comments(
     total = await comments.count()
     rows = await _comment_rows(
         comments.order_by("-created_at", "-commentid").offset((page - 1) * page_size).limit(page_size),
+        user.userid if user else None,
+    )
+    return {"code": 200, "data": {"items": rows, "total": total, "page": page, "page_size": page_size}}
+
+
+@router.get("/popular")
+async def list_popular_comments(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
+    user: Optional[User] = Depends(auth.get_optional_current_user),
+):
+    """Return visible comments ranked by the number of active likes."""
+    comments = (
+        MovieComment.filter(
+            deleted_at=None,
+            moderation_status__in=["published", "review_pending"],
+        )
+        .annotate(like_count=Count("likes", _filter=Q(likes__is_active=True)))
+        .order_by("-like_count", "-created_at", "-commentid")
+    )
+    total = await comments.count()
+    rows = await _comment_rows(
+        comments.offset((page - 1) * page_size).limit(page_size),
         user.userid if user else None,
     )
     return {"code": 200, "data": {"items": rows, "total": total, "page": page, "page_size": page_size}}

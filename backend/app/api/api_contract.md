@@ -43,6 +43,7 @@
 | GET | `/api/favorites/me` | 用户 | 当前用户收藏列表 |
 | POST | `/api/favorites/toggle` | 用户 | 新增、更新、取消或恢复收藏 |
 | GET | `/api/comments/movies/{movieid}/comments` | 公开 | 电影评论列表 |
+| GET | `/api/comments/popular` | 公开 | 按有效点赞数排序的热门影评 |
 | POST | `/api/comments` | 用户 | 发布评论 |
 | GET | `/api/comments/me` | 用户 | 当前用户评论列表 |
 | DELETE | `/api/comments/{commentid}` | 评论作者 | 软删除自己的评论 |
@@ -131,6 +132,8 @@
 **切换收藏** `POST /api/favorites/toggle`：`{"movieid":1,"status":"want_to_watch"}`，状态也可为 `watched`。新建时添加；对当前相同状态再次调用会软删除；不同状态会更新；对软删除记录调用会恢复。响应 `action` 为 `add|remove|update`。
 
 **电影评论** `GET /api/comments/movies/{movieid}/comments`：分页参数 `page`、`page_size` 同上。返回未删除且对外可见的评论列表，含评论内容、用户信息、点赞数、当前用户 `liked` 状态及分页字段。当前 `review_pending` 评论仍可见。
+
+**热门影评** `GET /api/comments/popular`：分页参数 `page`、`page_size` 同上。返回所有未删除且对外可见的评论，按有效点赞数降序排列；点赞数相同时按发布时间和评论 ID 倒序排列。返回字段与电影评论列表一致，当前 `review_pending` 评论仍可见。
 
 **发布评论** `POST /api/comments`：`{"movieid":1,"content":"A review"}`，内容去除首尾空格后需 1-500 字符，成功 `201`。
 
