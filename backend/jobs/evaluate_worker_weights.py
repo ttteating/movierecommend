@@ -202,7 +202,7 @@ def run(sample_users: int, seed: int, output: Path) -> dict:
 
         return {
             "evaluation": {
-                "source": "movierecommend_test.personalratings (read-only)",
+                "source": "movierecommend_new.personalratings (read-only)",
                 "input_rows": quality["trainable_rows"], "split": "per_user_random",
                 "seed": seed, "train_rows": split_sizes[0], "valid_rows": split_sizes[1],
                 "test_rows": split_sizes[2], "positive_threshold": args.positive_threshold,

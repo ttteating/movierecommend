@@ -14,6 +14,15 @@ import time
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
+from dotenv import load_dotenv
+
+BACKEND_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(BACKEND_ROOT))
+load_dotenv(BACKEND_ROOT.parent / ".env")
+
+from app.spark_runtime import configure_spark_java
+
+configure_spark_java()
 
 from pyspark import __version__ as SPARK_VERSION
 from pyspark.ml.evaluation import RegressionEvaluator

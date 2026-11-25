@@ -98,6 +98,10 @@
 
   /* ---------- 图片降级 ---------- */
   UI.imgCache = {};
+  UI.imageUrl = function (src) {
+    if (typeof src !== 'string') return '';
+    return src.replace(/^http:\/\/image\.tmdb\.org\//i, 'https://image.tmdb.org/');
+  };
   UI.fallbackSvg = function (text) {
     const label = String(text || '电影').slice(0, 14);
     const svg =
@@ -129,7 +133,7 @@
     const cls = extraClass ? ' class="' + extraClass + '"' : '';
     const fb = UI.esc(UI.fallbackSvg(title));
     return `<img${cls} loading="lazy" decoding="async" alt="${UI.esc(title)}"` +
-      ` src="${UI.esc(src || '')}"` +
+      ` src="${UI.esc(UI.imageUrl(src || ''))}"` +
       ` onerror="UI.posterOnError(this,'${UI.esc(String(title || '').replace(/'/g, ''))}')">`;
   };
 
@@ -226,7 +230,7 @@
     if (!src) return '';
     if (typeof src !== 'string') return '';
     // 用更高分辨率替代 w185，作为巨幕背景
-    return src.replace('/w185/', '/w780/');
+    return UI.imageUrl(src).replace('/w185/', '/w780/');
   };
 
   /* 导出 */

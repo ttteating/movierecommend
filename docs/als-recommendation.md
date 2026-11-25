@@ -10,11 +10,11 @@
 
 ## 环境检查
 
-项目固定 `pyspark==4.0.4`。建议使用 Java 17 或 21，并在 `spark-submit` classpath 上提供与 MySQL 服务器兼容的 Connector/J。脚本不会打印连接凭据或完整 URL。
+项目固定 `pyspark==4.0.4`，运行配置使用 `.env` 中的 `SPARK_JAVA_HOME` 指定 Java 21，并在 `spark-submit` classpath 上提供与 MySQL 服务器兼容的 Connector/J。脚本不会打印连接凭据或完整 URL。
 
 ```powershell
 python -m pip install -r requirements.txt
-$env:MYSQL_JDBC_URL = "jdbc:mysql://<readonly-host>:3306/movierecommend?useSSL=true&serverTimezone=UTC"
+$env:MYSQL_JDBC_URL = "jdbc:mysql://<readonly-host>:3306/movierecommend_new?useSSL=true&serverTimezone=UTC"
 $env:MYSQL_USER = "<readonly-user>"
 $env:MYSQL_PASSWORD = "<secret>"
 python backend/jobs/check_als_environment.py

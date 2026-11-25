@@ -18,16 +18,17 @@ JSONL 由 Python 从 Spark DataFrame 的 `toLocalIterator()` 流式写入，不�
 
 本地忽略的 `.env` 中配置以下内容；不要把凭据提交到仓库：
 
-- `DATABASE_URL`：指向 `movierecommend_test` 的只读连接，用于用户、评分、电影和既有推荐查询。
-- `MYSQL_JDBC_URL`、`MYSQL_USER`、`MYSQL_PASSWORD`：ALS 离线抽取只读账号，JDBC schema 必须是 `movierecommend_test`，时区设置为 UTC。
-- `RECOMMENDATION_WRITE_ENABLED=YES`：明确开启测试写入。未设置时 Worker 拒绝执行。
-- `RECOMMENDATION_WRITE_URL`：单独的测试库写账号 URL，必须指向 `movierecommend_test`；账号只授予 `recommendationitem` 的 INSERT 权限。request_id 幂等查询由 `DATABASE_URL` 只读账号执行；外键由 MySQL 约束检查。
+- `DATABASE_URL`：指向 `movierecommend_new` 的只读连接，用于用户、评分、电影和既有推荐查询。
+- `MYSQL_JDBC_URL`、`MYSQL_USER`、`MYSQL_PASSWORD`：ALS 离线抽取只读账号，JDBC schema 必须是 `movierecommend_new`，时区设置为 UTC。
+- `RECOMMENDATION_WRITE_ENABLED=YES`：明确开启推荐结果写入。未设置时 Worker 拒绝执行。
+- `RECOMMENDATION_WRITE_URL`：单独的数据库写账号 URL，必须指向 `movierecommend_new`；账号只授予 `recommendationitem` 的 INSERT 权限。request_id 幂等查询由 `DATABASE_URL` 只读账号执行；外键由 MySQL 约束检查。
 - `REDIS_URL` 与 `CELERY_RESULT_BACKEND`：本地 Redis 地址；若未单独配置结果后端，Celery 默认复用 broker 地址。
 - `ALS_RECOMMENDATION_ROOT`：API、Worker 和离线作业共同访问的目录，例如仓库下的 `data/processed/als-recommendations`。
+- `SPARK_JAVA_HOME`：Spark 运行用的 Java 21 安装目录；Celery Worker 启动时会将其应用到 ALS 子进程。
 - `RECOMMENDATION_CACHE_TTL=300`：JSON 缓存秒数。在线列表上限固定为 Top-20，界面、Mock 和 Worker 共用该目标。
 - `REDIS_SOCKET_TIMEOUT=1`：缓存读写连接超时秒数。
 
-代码硬性要求 source URL 与 writer URL 的数据库名都等于 `movierecommend_test`，并在 writer 建连后再次执行 `SELECT DATABASE()` 检查。不要将写账号用于 ALS 评分抽取。
+代码要求 source、JDBC 和 writer URL 指向同一个 `movierecommend_new` 数据库，并在 writer 建连后再次执行 `SELECT DATABASE()` 检查。不要将写账号用于 ALS 评分抽取。
 
 ## 离线发布
 

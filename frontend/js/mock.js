@@ -387,7 +387,7 @@
       return { code: 200, data: queryMovies(params || {}) };
     },
 
-    /* 分类列表：镜像真实数据库 movierecommend_test.category（22 类） */
+    /* 分类列表：镜像真实数据库 movierecommend_new.category（22 类） */
     categories: async function () {
       await delay();
       return { code: 200, data: REAL_CATEGORIES.map(c => ({ categoryid: c.categoryid, name: c.name })) };

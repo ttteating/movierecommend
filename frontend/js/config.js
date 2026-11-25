@@ -61,7 +61,7 @@ window.GENRE_ALIASES = {
 };
 
 /* ============================================================
- * 真实数据库（movierecommend_test.sql 导出）中的分类表内容
+ * 真实数据库（movierecommend_new.sql 导出）中的分类表内容
  * categoryid 1-22；演示模式（Mock）直接镜像这 22 个分类
  * ============================================================ */
 window.REAL_CATEGORIES = [

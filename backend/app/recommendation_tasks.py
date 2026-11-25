@@ -29,7 +29,7 @@ POPULARITY_RANK_WEIGHT = float(os.getenv("RECOMMENDATION_POPULARITY_RANK_WEIGHT"
 PROFILE_RANK_WEIGHT = float(os.getenv("RECOMMENDATION_PROFILE_RANK_WEIGHT", "0.15"))
 CLICK_BOOST = float(os.getenv("RECOMMENDATION_CLICK_BOOST", "0.10"))
 FEEDBACK_LOOKBACK_DAYS = int(os.getenv("RECOMMENDATION_FEEDBACK_LOOKBACK_DAYS", "90"))
-EXPECTED_DATABASE = "movierecommend_test"
+EXPECTED_DATABASE = unquote(urlsplit(DATABASE_URL).path.lstrip("/")) if DATABASE_URL else ""
 
 RANK_WEIGHTS = (OFFLINE_RANK_WEIGHT, POPULARITY_RANK_WEIGHT, PROFILE_RANK_WEIGHT)
 if not all(math.isfinite(weight) and weight >= 0 for weight in RANK_WEIGHTS):
@@ -42,17 +42,17 @@ RANKING_VERSION = (
 )
 
 
-def _assert_test_database() -> None:
+def _assert_recommendation_database() -> None:
     if os.getenv("RECOMMENDATION_WRITE_ENABLED") != "YES":
-        raise RuntimeError("Set RECOMMENDATION_WRITE_ENABLED=YES to enable test recommendation writes")
+        raise RuntimeError("Set RECOMMENDATION_WRITE_ENABLED=YES to enable recommendation writes")
     if not DATABASE_URL:
         raise RuntimeError("DATABASE_URL must be configured")
     database = unquote(urlsplit(DATABASE_URL).path.lstrip("/"))
     if database != EXPECTED_DATABASE:
-        raise RuntimeError("Recommendation source reads are restricted to movierecommend_test")
+        raise RuntimeError("Recommendation source database does not match the configured database")
     write_url = os.getenv("RECOMMENDATION_WRITE_URL")
     if not write_url or unquote(urlsplit(write_url).path.lstrip("/")) != EXPECTED_DATABASE:
-        raise RuntimeError("RECOMMENDATION_WRITE_URL must target movierecommend_test")
+        raise RuntimeError("RECOMMENDATION_WRITE_URL must target the configured database")
 
 
 def _load_als_for_user(user_id: int) -> list[dict]:
@@ -149,7 +149,7 @@ async def _insert_recommendation_rows(records: list[RecommendationItem]) -> None
             await cursor.execute("SELECT DATABASE()")
             database_row = await cursor.fetchone()
             if not database_row or database_row[0] != EXPECTED_DATABASE:
-                raise RuntimeError("Active recommendation writer is not connected to movierecommend_test")
+                raise RuntimeError("Active recommendation writer is connected to an unexpected database")
             await cursor.executemany(insert_sql, [(
                 row.request_id, row.user_id, row.movie_id, row.position,
                 row.movie_rating_snapshot, row.prediction_score,
@@ -164,7 +164,7 @@ async def _insert_recommendation_rows(records: list[RecommendationItem]) -> None
 
 
 async def _generate(user_id: int, request_id: str) -> dict:
-    _assert_test_database()
+    _assert_recommendation_database()
     await init_db()
     try:
         existing = await _existing_request(user_id, request_id)

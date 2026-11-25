@@ -1,13 +1,16 @@
 import os
 from datetime import timedelta
+from pathlib import Path
 
 try:
     from celery import Celery
 except ImportError:
     Celery = None
 from dotenv import load_dotenv
+from app.spark_runtime import configure_spark_java
 
-load_dotenv()
+load_dotenv(Path(__file__).resolve().parents[2] / ".env")
+configure_spark_java()
 
 REDIS_URL = os.getenv("REDIS_URL", "redis://127.0.0.1:6379/0")
 if Celery is None:

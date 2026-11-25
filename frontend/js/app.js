@@ -2498,7 +2498,7 @@
       const lb = document.getElementById('lightbox');
       const img = document.getElementById('lightboxImg');
       lb.hidden = false;
-      img.src = src || '';
+      img.src = UI.imageUrl(src || '');
       img.onerror = () => { img.src = UI.fallbackSvg('海报预览'); };
     },
 

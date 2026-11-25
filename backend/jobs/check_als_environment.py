@@ -8,6 +8,15 @@ import sys
 import argparse
 from pathlib import Path
 from urllib.parse import urlsplit
+from dotenv import load_dotenv
+
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(PROJECT_ROOT / "backend"))
+load_dotenv(PROJECT_ROOT / ".env")
+
+from app.spark_runtime import configure_spark_java
+
+configure_spark_java()
 
 try:
     import pyspark

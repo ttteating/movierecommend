@@ -1,0 +1,139 @@
+[2026-11-23 16:26:00,902: INFO/MainProcess] Connected to redis://:**@172.24.58.169:6380/0
+[2026-11-23 16:26:00,932: INFO/MainProcess] mingle: searching for neighbors
+[2026-11-23 16:26:02,319: INFO/MainProcess] mingle: all alone
+[2026-11-23 16:26:02,409: INFO/MainProcess] celery@LAPTOP-F55396L5 ready.
+[2026-11-23 16:35:08,800: INFO/MainProcess] Task recommendation.refresh_user[500aaf33-49f7-40bf-89a7-d5501038f078] received
+[2026-11-23 16:35:08,912: INFO/MainProcess] recommendation_published request_id=db63de66834d40e6ba6787b8faeba340 user_id=40337 items=20 algorithm=als-personalized-rerank-v1-o0.75-p0.1-g0.15-f0.1 cache_written=True hot_pool_available=True
+[2026-11-23 16:35:08,919: INFO/MainProcess] Tortoise-ORM shutdown
+[2026-11-23 16:35:08,943: INFO/MainProcess] Task recommendation.refresh_user[500aaf33-49f7-40bf-89a7-d5501038f078] succeeded in 0.14099999999962165s: {'request_id': 'db63de66834d40e6ba6787b8faeba340', 'count': 20, 'reused': False, 'cache_written': True, 'hot_pool_available': True}
+[2026-11-23 18:03:47,440: WARNING/MainProcess] Redis BRPOP got no reply for 338 seconds; dropping stale connection
+[2026-11-23 19:03:49,454: WARNING/MainProcess] Redis BRPOP got no reply for 3598 seconds; dropping stale connection
+[2026-11-23 19:03:53,891: WARNING/MainProcess] consumer: Connection to broker lost. Trying to re-establish the connection...
+Traceback (most recent call last):
+  File "D:\program\movie_recommend\.venv_new\Lib\site-packages\redis\connection.py", line 1055, in connect_check_health
+    sock = self._connect()
+           ^^^^^^^^^^^^^^^
+  File "D:\program\movie_recommend\.venv_new\Lib\site-packages\redis\connection.py", line 1617, in _connect
+    raise err
+  File "D:\program\movie_recommend\.venv_new\Lib\site-packages\redis\connection.py", line 1601, in _connect
+    sock.connect(socket_address)
+TimeoutError: timed out
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\program\movie_recommend\.venv_new\Lib\site-packages\celery\worker\consumer\consumer.py", line 346, in start
+    blueprint.start(self)
+  File "D:\program\movie_recommend\.venv_new\Lib\site-packages\celery\bootsteps.py", line 116, in start
+    step.start(parent)
+  File "D:\program\movie_recommend\.venv_new\Lib\site-packages\celery\worker\consumer\consumer.py", line 788, in start
+    c.loop(*c.loop_args())
+  File "D:\program\movie_recommend\.venv_new\Lib\site-packages\celery\worker\loops.py", line 168, in synloop
+    _loop_cycle()
+  File "D:\program\movie_recommend\.venv_new\Lib\site-packages\celery\worker\loops.py", line 157, in _loop_cycle
+    connection.drain_events(timeout=2.0)
+  File "D:\program\movie_recommend\.venv_new\Lib\site-packages\kombu\connection.py", line 399, in drain_events
+    return self.transport.drain_events(self.connection, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\program\movie_recommend\.venv_new\Lib\site-packages\kombu\transport\virtual\base.py", line 1007, in drain_events
+    get(self._deliver, timeout=timeout)
+  File "D:\program\movie_recommend\.venv_new\Lib\site-packages\kombu\transport\redis.py", line 891, in get
+    self.on_poll_start()
+  File "D:\program\movie_recommend\.venv_new\Lib\site-packages\kombu\transport\redis.py", line 742, in on_poll_start
+    self._register_BRPOP(channel)
+  File "D:\program\movie_recommend\.venv_new\Lib\site-packages\kombu\transport\redis.py", line 725, in _register_BRPOP
+    self._register(*ident)
+  File "D:\program\movie_recommend\.venv_new\Lib\site-packages\kombu\transport\redis.py", line 702, in _register
+    client.connection.connect()
+  File "D:\program\movie_recommend\.venv_new\Lib\site-packages\redis\connection.py", line 1028, in connect
+    self.retry.call_with_retry(
+  File "D:\program\movie_recommend\.venv_new\Lib\site-packages\redis\retry.py", line 132, in call_with_retry
+    raise error
+  File "D:\program\movie_recommend\.venv_new\Lib\site-packages\redis\retry.py", line 120, in call_with_retry
+    return do()
+           ^^^^
+  File "D:\program\movie_recommend\.venv_new\Lib\site-packages\redis\connection.py", line 1029, in <lambda>
+    lambda: self.connect_check_health(
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\program\movie_recommend\.venv_new\Lib\site-packages\redis\connection.py", line 1066, in connect_check_health
+    raise e
+redis.exceptions.TimeoutError: Timeout connecting to server
+[2026-11-23 19:03:54,807: WARNING/MainProcess] D:\program\movie_recommend\.venv_new\Lib\site-packages\celery\worker\consumer\consumer.py:397: CPendingDeprecationWarning: 
+In Celery 5.1 we introduced an optional breaking change which
+on connection loss cancels all currently executed tasks with late acknowledgement enabled.
+These tasks cannot be acknowledged as the connection is gone, and the tasks are automatically redelivered
+back to the queue. You can enable this behavior using the worker_cancel_long_running_tasks_on_connection_loss
+setting. In Celery 5.1 it is set to False by default. The setting will be set to True by default in Celery 6.0.
+
+  warnings.warn(CANCEL_TASKS_BY_DEFAULT, CPendingDeprecationWarning)
+
+[2026-11-23 19:03:54,913: INFO/MainProcess] Connected to redis://:**@172.24.58.169:6380/0
+[2026-11-23 19:03:54,943: INFO/MainProcess] mingle: searching for neighbors
+[2026-11-23 19:03:56,064: INFO/MainProcess] mingle: all alone
+[2026-11-23 19:36:44,531: WARNING/MainProcess] Redis BRPOP got no reply for 1965 seconds; dropping stale connection
+[2026-11-23 19:37:19,562: WARNING/MainProcess] consumer: Connection to broker lost. Trying to re-establish the connection...
+Traceback (most recent call last):
+  File "D:\program\movie_recommend\.venv_new\Lib\site-packages\redis\connection.py", line 1407, in read_response
+    response = self._parser.read_response(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\program\movie_recommend\.venv_new\Lib\site-packages\redis\_parsers\resp3.py", line 40, in read_response
+    result = self._read_response(
+             ^^^^^^^^^^^^^^^^^^^^
+  File "D:\program\movie_recommend\.venv_new\Lib\site-packages\redis\_parsers\resp3.py", line 65, in _read_response
+    raw = self._buffer.readline(timeout=timeout)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\program\movie_recommend\.venv_new\Lib\site-packages\redis\_parsers\socket.py", line 117, in readline
+    self._read_from_socket(timeout=timeout)
+  File "D:\program\movie_recommend\.venv_new\Lib\site-packages\redis\_parsers\socket.py", line 64, in _read_from_socket
+    data = sock.recv(socket_read_size)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ConnectionResetError: [WinError 10054] 远程主机强迫关闭了一个现有的连接。
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\program\movie_recommend\.venv_new\Lib\site-packages\celery\worker\consumer\consumer.py", line 346, in start
+    blueprint.start(self)
+  File "D:\program\movie_recommend\.venv_new\Lib\site-packages\celery\bootsteps.py", line 116, in start
+    step.start(parent)
+  File "D:\program\movie_recommend\.venv_new\Lib\site-packages\celery\worker\consumer\consumer.py", line 788, in start
+    c.loop(*c.loop_args())
+  File "D:\program\movie_recommend\.venv_new\Lib\site-packages\celery\worker\loops.py", line 168, in synloop
+    _loop_cycle()
+  File "D:\program\movie_recommend\.venv_new\Lib\site-packages\celery\worker\loops.py", line 157, in _loop_cycle
+    connection.drain_events(timeout=2.0)
+  File "D:\program\movie_recommend\.venv_new\Lib\site-packages\kombu\connection.py", line 399, in drain_events
+    return self.transport.drain_events(self.connection, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\program\movie_recommend\.venv_new\Lib\site-packages\kombu\transport\virtual\base.py", line 1007, in drain_events
+    get(self._deliver, timeout=timeout)
+  File "D:\program\movie_recommend\.venv_new\Lib\site-packages\kombu\transport\redis.py", line 902, in get
+    ret = self.handle_event(fileno, event)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\program\movie_recommend\.venv_new\Lib\site-packages\kombu\transport\redis.py", line 880, in handle_event
+    return self.on_readable(fileno), self
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\program\movie_recommend\.venv_new\Lib\site-packages\kombu\transport\redis.py", line 863, in on_readable
+    chan.handlers[type]()
+  File "D:\program\movie_recommend\.venv_new\Lib\site-packages\kombu\transport\redis.py", line 1479, in _brpop_read
+    dest__item = self.client.parse_response(self.client.connection,
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\program\movie_recommend\.venv_new\Lib\site-packages\redis\client.py", line 935, in parse_response
+    response = connection.read_response()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\program\movie_recommend\.venv_new\Lib\site-packages\redis\connection.py", line 1423, in read_response
+    raise ConnectionError(f"Error while reading from {host_error} : {e.args}")
+redis.exceptions.ConnectionError: Error while reading from 172.24.58.169:6380 : (10054, '远程主机强迫关闭了一个现有的连接。', None, 10054, None)
+[2026-11-23 19:37:22,549: WARNING/MainProcess] D:\program\movie_recommend\.venv_new\Lib\site-packages\celery\worker\consumer\consumer.py:397: CPendingDeprecationWarning: 
+In Celery 5.1 we introduced an optional breaking change which
+on connection loss cancels all currently executed tasks with late acknowledgement enabled.
+These tasks cannot be acknowledged as the connection is gone, and the tasks are automatically redelivered
+back to the queue. You can enable this behavior using the worker_cancel_long_running_tasks_on_connection_loss
+setting. In Celery 5.1 it is set to False by default. The setting will be set to True by default in Celery 6.0.
+
+  warnings.warn(CANCEL_TASKS_BY_DEFAULT, CPendingDeprecationWarning)
+
+[2026-11-23 19:37:24,693: INFO/MainProcess] Connected to redis://:**@172.24.58.169:6380/0
+[2026-11-23 19:37:24,710: INFO/MainProcess] mingle: searching for neighbors
+[2026-11-23 19:37:25,747: INFO/MainProcess] mingle: all alone
+[2026-11-23 19:53:20,003: WARNING/MainProcess] Redis BRPOP got no reply for 612 seconds; dropping stale connection

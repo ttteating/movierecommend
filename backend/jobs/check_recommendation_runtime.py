@@ -44,15 +44,14 @@ def main() -> int:
     )
     checks["celery_json_only"] = set(celery_app.conf.accept_content or []) == {"json"}
     checks["recommendation_write_enabled"] = os.getenv("RECOMMENDATION_WRITE_ENABLED") == "YES"
-    checks["recommendation_database_is_test"] = (
-        database_name(os.getenv("DATABASE_URL")) == "movierecommend_test"
-    )
+    source_database = database_name(os.getenv("DATABASE_URL"))
+    checks["recommendation_database_is_new"] = source_database == "movierecommend_new"
     checks["recommendation_writer_configured"] = bool(os.getenv("RECOMMENDATION_WRITE_URL"))
-    checks["recommendation_writer_database_is_test"] = (
-        database_name(os.getenv("RECOMMENDATION_WRITE_URL")) == "movierecommend_test"
+    checks["recommendation_writer_database_matches_source"] = (
+        database_name(os.getenv("RECOMMENDATION_WRITE_URL")) == source_database
     )
-    checks["als_jdbc_database_is_test"] = (
-        jdbc_database_name(os.getenv("MYSQL_JDBC_URL")) == "movierecommend_test"
+    checks["als_jdbc_database_matches_source"] = (
+        jdbc_database_name(os.getenv("MYSQL_JDBC_URL")) == source_database
     )
     checks["als_shared_root_configured"] = bool(os.getenv("ALS_RECOMMENDATION_ROOT"))
 
@@ -85,9 +84,9 @@ def main() -> int:
         print(f"{name}={value}")
     required = (
         "redis_ping", "celery_broker_connection", "celery_worker_online",
-        "recommendation_write_enabled", "recommendation_database_is_test",
-        "recommendation_writer_configured", "recommendation_writer_database_is_test",
-        "als_jdbc_database_is_test", "als_shared_root_configured",
+        "recommendation_write_enabled", "recommendation_database_is_new",
+        "recommendation_writer_configured", "recommendation_writer_database_matches_source",
+        "als_jdbc_database_matches_source", "als_shared_root_configured",
     )
     ready = all(checks.get(name) for name in required)
     print(f"recommendation_runtime_ready={ready}")

@@ -139,6 +139,8 @@ wsl -d Ubuntu-24.04 -- redis-server --version
 ```powershell
 wsl -d Ubuntu-24.04 -- bash /mnt/d/program/movie_recommend/backend/jobs/start_redis_wsl.sh
 ```
+wsl -d Ubuntu-24.04 -- bash /mnt/d/program/movie_recommend/backend/jobs/start_redis_wsl.sh
+
 
 预期最后输出 `PONG`。Redis 配置位于 WSL 用户目录 `~/.config/movierecommend/redis.conf`，数据目录为 `~/.local/share/movie-recommend-redis`。WSL IP 可能变化；每次启动或重启 WSL 后都运行此脚本，再重启 API、Worker 和 Beat，使它们重新读取更新后的 `.env`。
 
@@ -206,7 +208,7 @@ Authorization: Bearer <access_token>
 
 ## 数据库迁移
 
-SQL 升级脚本位于 `backend/migrations/`：`0001_schema_upgrade.sql` 升级基础业务表结构，`0002_delivery_indexes_and_legacy_recommend.sql` 补充索引及旧推荐表字段，`0003_auth_token_version.sql` 为用户和管理员表添加 JWT 失效控制字段，`0004_movie_rating_blend.sql` 补充电影评分融合字段，`0005_moviecategory_soft_delete.sql` 为电影分类关联增加软删除并统一新业务表排序规则。它们不是 API 启动时执行的自动迁移；在已有数据库上手动执行前，先备份并核对目标库及脚本影响。`backend/migrations/aerich/models/2_20261029160409_personalratings_zero_to_five.py` 的升级也已修正为保留评分数据并落实 1–5 约束。
+SQL 升级脚本位于 `backend/migrations/`：`0001_schema_upgrade.sql` 升级基础业务表结构，`0002_delivery_indexes_and_legacy_recommend.sql` 补充索引及旧推荐表字段，`0003_auth_token_version.sql` 为用户和管理员表添加 JWT 失效控制字段，`0004_movie_rating_blend.sql` 补充电影评分融合字段，`0005_moviecategory_soft_delete.sql` 为电影分类关联增加软删除并统一新业务表排序规则。0005 不会切换数据库，执行时必须先选中目标库（当前开发配置为 `movierecommend_new`），例如 `mysql -u <user> -p movierecommend_new < backend/migrations/0005_moviecategory_soft_delete.sql`。迁移不是 API 启动时自动执行的；在已有数据库上手动执行前，先备份并核对目标库及脚本影响。`backend/migrations/aerich/models/2_20261029160409_personalratings_zero_to_five.py` 的升级也已修正为保留评分数据并落实 1–5 约束。
 
 
 ## 停止服务

@@ -15,8 +15,8 @@ if (-not $databaseLine) {
 $databaseUrl = $databaseLine.Substring("DATABASE_URL=".Length)
 $databaseUri = [Uri]$databaseUrl
 $databaseName = [Uri]::UnescapeDataString($databaseUri.AbsolutePath.TrimStart('/'))
-if ($databaseName -ne "movierecommend_test") {
-    throw "DATABASE_URL must target movierecommend_test before configuring the recommendation writer"
+if ($databaseName -ne "movierecommend_new") {
+    throw "DATABASE_URL must target movierecommend_new before configuring the recommendation writer"
 }
 
 $securePassword = Read-Host "Password for MySQL user $WriterUser (input is hidden)" -AsSecureString
@@ -27,7 +27,7 @@ try {
     $encodedPassword = [Uri]::EscapeDataString($plainPassword)
     $encodedHost = $databaseUri.Host
     $port = if ($databaseUri.IsDefaultPort) { 3306 } else { $databaseUri.Port }
-    $writerUrl = "mysql://${encodedUser}:${encodedPassword}@${encodedHost}:${port}/movierecommend_test"
+    $writerUrl = "mysql://${encodedUser}:${encodedPassword}@${encodedHost}:${port}/${databaseName}"
 } finally {
     [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($passwordPointer)
     $plainPassword = $null
